@@ -1,0 +1,9 @@
+{
+  "name": "xsurvey-analyser",
+  "version": "1.0.0",
+  "private": true,
+  "description": "XSurvey Analyser — internal survey analysis tool for Infinix.",
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}

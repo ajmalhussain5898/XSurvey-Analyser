@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>XSurvey Analyser</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --bg-0:#0A0D10; --bg-1:#12161B; --bg-2:#1A2027; --bg-3:#222A32;
+  --border:#2A323B; --text-0:#F0F2F4; --text-1:#B7BFC8; --text-2:#767F89;
+  --accent:#C6FF3D; --accent-dim:#8FBF1E; --accent-ink:#12160A;
+  --warn:#FF9752; --danger:#FF6B5B; --ok:#3DD9A0; --radius:10px;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg-0);color:var(--text-0);font-family:'Inter',sans-serif;font-size:14px;}
+h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.01em;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+#app{display:flex;height:100vh;overflow:hidden;}
+#nav{width:240px;flex-shrink:0;background:var(--bg-1);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:18px 12px;overflow-y:auto;}
+.brand{display:flex;align-items:center;gap:9px;padding:4px 8px 20px;}
+.brand-mark{width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Space Grotesk';font-size:14px;}
+.brand-name{font-family:'Space Grotesk';font-weight:600;font-size:15px;}
+.nav-group{margin-top:14px;}
+.nav-group-label{font-size:10px;letter-spacing:.12em;color:var(--text-2);text-transform:uppercase;padding:0 10px;margin-bottom:6px;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;color:var(--text-1);cursor:pointer;font-size:13px;font-weight:500;transition:.12s;}
+.nav-item:hover{background:var(--bg-2);color:var(--text-0);}
+.nav-item.active{background:var(--bg-3);color:var(--accent);}
+.nav-item .dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.6;flex-shrink:0;}
+.role-switch{margin-top:auto;padding:12px 10px;border-top:1px solid var(--border);}
+.role-switch-label{font-size:10px;color:var(--text-2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
+.role-btns{display:flex;background:var(--bg-2);border-radius:8px;padding:3px;gap:3px;}
+.role-btn{flex:1;text-align:center;padding:7px 4px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;color:var(--text-2);}
+.role-btn.active{background:var(--accent);color:var(--accent-ink);}
+#main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+#topbar{height:56px;flex-shrink:0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:var(--bg-1);}
+.crumb{font-size:12px;color:var(--text-2);}
+.crumb b{color:var(--text-0);font-weight:600;}
+.ds-pill{display:flex;align-items:center;gap:7px;background:var(--bg-2);border:1px solid var(--border);border-radius:99px;padding:5px 12px 5px 8px;font-size:12px;color:var(--text-1);}
+.ds-pill .n{width:7px;height:7px;border-radius:50%;background:var(--text-2);}
+.ds-pill.has-data .n{background:var(--ok);}
+#content{padding:26px 30px 60px;max-width:1180px;}
+.hidden{display:none !important;}
+.panel-title{font-size:20px;font-weight:600;margin:0 0 3px;}
+.panel-sub{color:var(--text-1);font-size:13px;margin:0 0 22px;max-width:700px;line-height:1.5;}
+.card{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;}
+.card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.card-h h3{font-size:14px;margin:0;font-weight:600;}
+.card-h .hint{font-size:11.5px;color:var(--text-2);}
+button.btn{background:var(--accent);color:var(--accent-ink);border:none;border-radius:7px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:'Inter';}
+button.btn:hover{background:#d8ff6e;}
+button.btn.secondary{background:var(--bg-3);color:var(--text-0);border:1px solid var(--border);}
+button.btn.secondary:hover{background:#28313a;}
+button.btn.small{padding:5px 10px;font-size:11px;}
+button.btn:disabled{opacity:.4;cursor:not-allowed;}
+select,input[type=text],input[type=number],input[type=file],input[type=color]{background:var(--bg-2);border:1px solid var(--border);color:var(--text-0);border-radius:6px;padding:7px 10px;font-size:12.5px;font-family:'Inter';}
+input[type=color]{padding:3px;width:38px;height:30px;cursor:pointer;}
+select[multiple]{padding:4px;}
+select{cursor:pointer;}
+label.field-label{font-size:11px;color:var(--text-2);text-transform:uppercase;letter-spacing:.06em;font-weight:600;display:block;margin-bottom:5px;}
+.tag{display:inline-flex;align-items:center;gap:5px;background:var(--bg-3);border:1px solid var(--border);border-radius:99px;padding:3px 9px;font-size:10.5px;color:var(--text-1);font-weight:600;}
+.tag.accent{background:rgba(198,255,61,.13);color:var(--accent);border-color:rgba(198,255,61,.3);}
+.tag.warn{background:rgba(255,151,82,.13);color:var(--warn);border-color:rgba(255,151,82,.3);}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{text-align:left;color:var(--text-2);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:8px 10px;border-bottom:1px solid #1e252c;color:var(--text-1);white-space:nowrap;}
+tr:hover td{background:var(--bg-2);}
+.grid-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px;}
+.module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.module-card{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:.12s;}
+.module-card:hover{border-color:var(--accent);transform:translateY(-1px);}
+.module-card.active{border-color:var(--accent);background:var(--bg-2);}
+.module-card .mod-icon{width:30px;height:30px;border-radius:7px;background:var(--bg-3);display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:15px;}
+.module-card h4{margin:0 0 3px;font-size:13px;}
+.module-card p{margin:0;font-size:11px;color:var(--text-2);line-height:1.4;}
+.callout{background:linear-gradient(135deg,rgba(198,255,61,.08),rgba(198,255,61,.02));border:1px solid rgba(198,255,61,.25);border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--text-0);line-height:1.55;margin-top:12px;}
+.callout b{color:var(--accent);}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.stat-box{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+.stat-box .v{font-family:'Space Grotesk';font-size:19px;font-weight:600;}
+.stat-box .l{font-size:10.5px;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+.chart-box{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:14px;height:300px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+.field-row{display:flex;gap:14px;align-items:end;margin-bottom:16px;flex-wrap:wrap;}
+.chart-custom{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-top:10px;font-size:11.5px;color:var(--text-1);}
+.chart-custom .grp{display:flex;align-items:center;gap:6px;}
+.dash-section{margin-bottom:26px;}
+.dash-section-h{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.dash-section-h h3{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.06em;color:var(--text-1);flex:1;}
+.dash-tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+.tile{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.tile-h{display:flex;justify-content:space-between;align-items:start;margin-bottom:10px;}
+.tile-h .t{font-size:12.5px;font-weight:600;}
+.tile-h .rm{color:var(--text-2);cursor:pointer;font-size:15px;line-height:1;}
+.tile-h .rm:hover{color:var(--danger);}
+.tile img{width:100%;border-radius:6px;}
+.tile table{font-size:11px;}
+.empty-dash{border:1px dashed var(--border);border-radius:var(--radius);padding:26px;text-align:center;color:var(--text-2);font-size:12px;}
+.filter-bar{display:flex;gap:10px;align-items:center;background:var(--bg-1);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:20px;flex-wrap:wrap;}
+.filter-bar .fb-label{font-size:11px;color:var(--text-2);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-right:2px;}
+#insight-out{white-space:pre-wrap;line-height:1.65;font-size:13px;}
+.loading-dots::after{content:'';animation:dots 1.2s steps(4,end) infinite;}
+@keyframes dots{0%,20%{content:'.'}40%{content:'..'}60%,100%{content:'...'}}
+.qd-input{width:100%;background:transparent;border:none;color:var(--text-0);font-size:12.5px;padding:2px;border-radius:4px;}
+.qd-input:focus{background:var(--bg-3);outline:1px solid var(--accent);}
+.miss-bar{height:6px;border-radius:3px;background:var(--bg-3);overflow:hidden;width:70px;display:inline-block;vertical-align:middle;margin-right:6px;}
+.miss-bar i{display:block;height:100%;background:var(--warn);}
+.empty-panel{border:1px dashed var(--border);border-radius:var(--radius);padding:34px;text-align:center;color:var(--text-2);font-size:13px;}
+.section-chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg-2);border:1px solid var(--border);border-radius:99px;padding:5px 6px 5px 12px;font-size:11.5px;margin:0 6px 6px 0;}
+.section-chip button{background:transparent;border:none;color:var(--text-2);cursor:pointer;padding:2px 6px;font-size:13px;}
+.section-chip button:hover{color:var(--danger);}
+.small-note{font-size:11.5px;color:var(--text-2);line-height:1.5;margin:0 0 12px;}
+.kano-map-row{display:grid;grid-template-columns:2fr 1fr;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid #1e252c;}
+.download-row{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="nav">
+    <div class="brand">
+      <div class="brand-mark">X</div>
+      <div class="brand-name">XSurvey Analyser</div>
+    </div>
+    <div class="nav-group" data-role-group="analyst">
+      <div class="nav-group-label">Data</div>
+      <div class="nav-item" data-tab="upload"><span class="dot"></span>Upload &amp; Preview</div>
+      <div class="nav-item" data-tab="clean"><span class="dot"></span>Missing Values &amp; ETL</div>
+      <div class="nav-item" data-tab="dict"><span class="dot"></span>Question Dictionary</div>
+    </div>
+    <div class="nav-group" data-role-group="analyst">
+      <div class="nav-group-label">Analysis</div>
+      <div class="nav-item" data-tab="analysis"><span class="dot"></span>Analysis Workbench</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Dashboard</div>
+      <div class="nav-item" data-tab="dashboard"><span class="dot"></span>Dashboard Builder</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Insights</div>
+      <div class="nav-item" data-tab="insights"><span class="dot"></span>Generate Insights Report</div>
+    </div>
+    <div class="role-switch">
+      <div class="role-switch-label">Viewing as</div>
+      <div class="role-btns">
+        <div class="role-btn active" data-role="analyst">Analyst</div>
+        <div class="role-btn" data-role="exec">Executive Viewer</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="topbar">
+      <div class="crumb">XSurvey Analyser / <b id="crumb-tab">Upload &amp; Preview</b></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="ds-pill" id="ds-pill"><span class="n"></span><span id="ds-name">No dataset loaded</span></div>
+        <button class="btn secondary small" id="topbar-remove-btn" onclick="removeData()" style="display:none">Remove data</button>
+      </div>
+    </div>
+
+    <div id="content">
+
+      <!-- ===================== UPLOAD ===================== -->
+      <section id="tab-upload" class="tab-panel">
+        <h2 class="panel-title">Upload &amp; Preview</h2>
+        <p class="panel-sub">Bring in a survey export (.xlsx / .csv) to get started. Everything you build — Dictionary, Analysis, Dashboard — is saved in this browser automatically and stays there across refreshes and closing the tab, until you remove it yourself.</p>
+        <div class="card">
+          <div class="card-h"><h3>Upload data</h3><span class="hint">.xlsx, .csv supported</span></div>
+          <input type="file" id="file-input" accept=".xlsx,.csv">
+          <div id="upload-status" style="margin-top:10px;font-size:12px;color:var(--text-2)"></div>
+        </div>
+        <div class="card" id="remove-data-card" style="display:none">
+          <div class="card-h"><h3>Remove data</h3><span class="hint">Clears the saved dataset, Dictionary, Analysis selections, and Dashboard from this browser</span></div>
+          <button class="btn secondary small" onclick="removeData()" style="border-color:var(--danger);color:var(--danger)">Remove uploaded data</button>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>Preview</h3><span class="hint" id="preview-hint"></span></div>
+          <div id="preview-wrap" class="grid-wrap" style="max-height:340px;overflow-y:auto;"><table id="preview-table"></table></div>
+        </div>
+      </section>
+
+      <!-- ===================== CLEAN / ETL ===================== -->
+      <section id="tab-clean" class="tab-panel hidden">
+        <h2 class="panel-title">Missing Values &amp; ETL</h2>
+        <p class="panel-sub">Per-variable completeness. Short Label here is the same field as in the Question Dictionary — edit it in either place and it updates chart labels, tables, and dropdowns everywhere in the tool.</p>
+        <div id="clean-body"></div>
+      </section>
+
+      <!-- ===================== DICTIONARY ===================== -->
+      <section id="tab-dict" class="tab-panel hidden">
+        <h2 class="panel-title">Question Dictionary</h2>
+        <p class="panel-sub">Short Labels are what appear everywhere else in the tool. Sections are yours to define — rename the defaults, delete what you don't need, or add new ones for a dataset with a different question set.</p>
+
+        <div class="card">
+          <div class="card-h"><h3>Sections</h3><span class="hint">Used across the Dictionary and Dashboard</span></div>
+          <div id="section-chips"></div>
+          <div class="field-row" style="margin-top:10px;margin-bottom:0">
+            <div><label class="field-label">New section name</label><input type="text" id="new-section-name" placeholder="e.g. Competitive Landscape"></div>
+            <button class="btn secondary small" onclick="addSection()">+ Add section</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="grid-wrap" style="max-height:520px;overflow-y:auto;" id="dict-wrap"><table id="dict-table"></table></div>
+        </div>
+      </section>
+
+      <!-- ===================== ANALYSIS ===================== -->
+      <section id="tab-analysis" class="tab-panel hidden">
+        <h2 class="panel-title">Analysis Workbench</h2>
+        <p class="panel-sub">Every module outputs a table and a chart together. Charts are stylable in-app (color, gridlines, axis labels, font size) and export as real, editable native Excel chart objects — not flattened images — alongside a PNG. PSM, Max-Diff, Conjoint and Kano run on questions you choose from the Question Dictionary.</p>
+
+        <div class="module-grid">
+          <div class="module-card active" data-mod="freq"><div class="mod-icon">▤</div><h4>Frequency Table &amp; Graph</h4><p>Counts &amp; % by base</p></div>
+          <div class="module-card" data-mod="cross"><div class="mod-icon">⊞</div><h4>Cross-Tabulation</h4><p>Banner-style, up to 5 columns</p></div>
+          <div class="module-card" data-mod="multi"><div class="mod-icon">☑</div><h4>Multi-Response</h4><p>% of respondents vs. % of mentions</p></div>
+          <div class="module-card" data-mod="desc"><div class="mod-icon">Σ</div><h4>Descriptive Statistics</h4><p>Mean / median / SD / distribution</p></div>
+          <div class="module-card" data-mod="vw"><div class="mod-icon">$</div><h4>PSM — Van Westendorp</h4><p>Pick your 4 price questions</p></div>
+          <div class="module-card" data-mod="gg"><div class="mod-icon">📈</div><h4>PSM — Gabor-Granger</h4><p>Build your own price ladder</p></div>
+          <div class="module-card" data-mod="md"><div class="mod-icon">⚖</div><h4>Max-Diff</h4><p>Pick your best/worst questions</p></div>
+          <div class="module-card" data-mod="cj"><div class="mod-icon">◧</div><h4>Conjoint Analysis</h4><p>Pick your ranked-factor question</p></div>
+          <div class="module-card" data-mod="kano"><div class="mod-icon">◈</div><h4>Kano Analysis</h4><p>Pick functional/dysfunctional pairs</p></div>
+        </div>
+
+        <div id="module-body"></div>
+      </section>
+
+      <!-- ===================== DASHBOARD ===================== -->
+      <section id="tab-dashboard" class="tab-panel hidden">
+        <h2 class="panel-title">Dashboard Builder</h2>
+        <p class="panel-sub" id="dash-sub">A canvas you build deliberately — nothing here is auto-populated. Pin a chart or a table from the Analysis Workbench into any section below, or add your own custom section.</p>
+
+        <div class="filter-bar" id="analyst-only-filterbar">
+          <span class="fb-label">Global filters</span>
+          <select><option>Full sample</option><option>Custom segment A</option><option>Custom segment B</option></select>
+          <button class="btn secondary small">Save as version…</button>
+          <span style="margin-left:auto" class="tag accent">Version: Full Sample</span>
+        </div>
+
+        <div class="card" id="analyst-only-addsection">
+          <div class="field-row" style="margin:0">
+            <div><label class="field-label">Add a custom dashboard section</label><input type="text" id="new-dash-section" placeholder="e.g. Fieldwork Notes"></div>
+            <button class="btn secondary small" onclick="addDashboardOnlySection()">+ Add section</button>
+          </div>
+        </div>
+
+        <div id="dash-sections"></div>
+      </section>
+
+      <!-- ===================== INSIGHTS ===================== -->
+      <section id="tab-insights" class="tab-panel hidden">
+        <h2 class="panel-title">Insights Report</h2>
+        <p class="panel-sub">Reads every tile currently pinned to the Dashboard and drafts a one-page executive brief. Nothing not on the Dashboard gets summarized.</p>
+        <div class="card">
+          <div class="card-h"><h3>Dashboard snapshot</h3><span class="hint" id="pinned-count">0 tiles pinned</span></div>
+          <div id="insight-src-list" style="font-size:12px;color:var(--text-1);line-height:1.8"></div>
+          <button class="btn" style="margin-top:14px" onclick="generateInsights()" id="gen-btn">Generate Insights Report</button>
+        </div>
+        <div class="card hidden" id="insight-card">
+          <div class="card-h"><h3>Executive Insights Report</h3><button class="btn secondary small" onclick="window.print()">Export PDF</button></div>
+          <div id="insight-out"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+Chart.register(ChartDataLabels);
+const PALETTE = ['#C6FF3D','#8FBF1E','#3DD9A0','#FF9752','#FF6B5B','#7FB6FF','#D9A6FF','#FFD166'];
+
+/* ============================= STATE ============================= */
+let rows = [];
+let columns = [];
+let dict = {};
+let sections = [];
+let dashboardOnlySections = [];
+let dashboard = {};
+let chartRegistry = {};
+let chartStyle = {};   // canvasId -> {color, grid, xLabels, yLabels, fontSize}
+let fileName = '';
+const STORAGE_KEY = 'xsurvey_analyser_state_v1';
+let currentMod = 'freq';
+let role = 'analyst';
+let uid = 0; const newId = ()=> 'sec_'+(++uid)+'_'+Math.random().toString(36).slice(2,7);
+
+function seedDefaultSections(){
+  sections = [
+    {id:newId(), name:"Demographics Profile"},
+    {id:newId(), name:"Awareness, Current Brand & Purchase Consideration"},
+    {id:newId(), name:"Purchase Reasons / Factors"},
+    {id:newId(), name:"Purchase Journey & Media"},
+    {id:newId(), name:"Pricing Perception"},
+    {id:newId(), name:"Advanced Analysis"}
+  ];
+}
+function allDashboardSections(){ return [...sections, ...dashboardOnlySections]; }
+
+/* ============================= PERSISTENCE (survives refresh) ============================= */
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      rows, columns, dict, sections, dashboardOnlySections, dashboard, fileName, uid
+    }));
+  }catch(e){ console.warn('Could not save XSurvey Analyser state to this browser:', e.message); }
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const s = JSON.parse(raw);
+    if(!s.columns || s.columns.length===0) return false;
+    rows = s.rows||[]; columns = s.columns||[]; dict = s.dict||{};
+    sections = s.sections||[]; dashboardOnlySections = s.dashboardOnlySections||[];
+    dashboard = s.dashboard||{}; fileName = s.fileName||''; uid = s.uid||0;
+    return true;
+  }catch(e){ console.warn('Could not restore saved state:', e.message); return false; }
+}
+function removeData(){
+  if(!confirm('Remove the uploaded dataset and everything built from it — Dictionary, Analysis, Dashboard, Insights? This cannot be undone.')) return;
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  rows=[]; columns=[]; dict={}; dashboardOnlySections=[]; fileName='';
+  ggRows=[]; kanoFeatures=[]; kanoMapping={};
+  seedDefaultSections();
+  dashboard={}; allDashboardSections().forEach(s=>dashboard[s.id]=[]);
+  document.getElementById('ds-name').textContent = 'No dataset loaded';
+  document.getElementById('ds-pill').classList.remove('has-data');
+  document.getElementById('topbar-remove-btn').style.display = 'none';
+  document.getElementById('remove-data-card').style.display = 'none';
+  document.getElementById('upload-status').textContent = 'Dataset removed from this browser.';
+  const fi = document.getElementById('file-input'); if(fi) fi.value = '';
+  renderAll();
+  showTab('upload');
+}
+
+/* ============================= FILE UPLOAD ============================= */
+document.getElementById('file-input').addEventListener('change', function(e){
+  const f = e.target.files[0];
+  if(!f) return;
+  document.getElementById('upload-status').textContent = "Parsing "+f.name+"…";
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const wb = XLSX.read(evt.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws, {defval:""});
+      if(json.length===0){ document.getElementById('upload-status').textContent="No rows found."; return; }
+      columns = Object.keys(json[0]);
+      rows = json;
+      seedDefaultSections();
+      buildDictionary();
+      dashboard = {}; allDashboardSections().forEach(s=>dashboard[s.id]=[]);
+      fileName = f.name;
+      document.getElementById('ds-name').textContent = fileName;
+      document.getElementById('ds-pill').classList.add('has-data');
+      document.getElementById('topbar-remove-btn').style.display = '';
+      document.getElementById('remove-data-card').style.display = '';
+      document.getElementById('upload-status').textContent = "Loaded "+rows.length+" rows × "+columns.length+" columns. Saved in this browser — it'll still be here after a refresh.";
+      renderAll();
+    }catch(err){
+      document.getElementById('upload-status').textContent = "Could not parse file: "+err.message;
+    }
+  };
+  reader.readAsBinaryString(f);
+});
+
+/* ============================= DICTIONARY ============================= */
+function shortLabel(name){
+  let clean = String(name).replace(/\(SA\)|\(OE\)|\(MA\)/g,'').replace(/^[A-Z]?\d*[a-z]?\.\s*/,'').trim();
+  const words = clean.split(/\s+/).slice(0,6).join(' ');
+  return words.length < clean.length ? words+'…' : words;
+}
+function detectType(col){
+  const sample = rows.slice(0,30).map(r=>r[col]);
+  const hasComma = sample.some(v=> String(v).includes(', ') && String(v).split(',').length>=2 );
+  if(hasComma) return "Multi-response";
+  const numeric = sample.every(v=>v===""||v===undefined||!isNaN(parseFloat(v)));
+  if(numeric && sample.some(v=>v!=="")) return "Numeric";
+  return "Categorical";
+}
+function buildDictionary(){
+  dict = {};
+  const defaultSection = sections[0].id;
+  columns.forEach(c=>{ dict[c] = { short: shortLabel(c), type: detectType(c), section: defaultSection }; });
+}
+function pctMissing(col){
+  let miss = 0;
+  rows.forEach(r=>{ if(r[col]===""||r[col]===undefined||r[col]===null) miss++; });
+  return rows.length? Math.round(miss/rows.length*100):0;
+}
+function updateShortLabel(col, val){
+  dict[col].short = val;
+  renderAll();
+}
+
+function renderSectionChips(){
+  document.getElementById('section-chips').innerHTML = sections.map(s=>`
+    <span class="section-chip">
+      <input class="qd-input mono" style="width:auto;min-width:60px" value="${s.name}" onchange="renameSection('${s.id}',this.value)">
+      <button onclick="removeSection('${s.id}')" title="Remove section">×</button>
+    </span>`).join('');
+}
+function addSection(){
+  const inp = document.getElementById('new-section-name');
+  const name = inp.value.trim(); if(!name) return;
+  const s = {id:newId(), name}; sections.push(s); dashboard[s.id] = []; inp.value=''; renderAll();
+}
+function renameSection(id, name){ const s = allDashboardSections().find(s=>s.id===id); if(s) s.name=name; renderAll(); }
+function removeSection(id){
+  sections = sections.filter(s=>s.id!==id);
+  const fallback = sections[0] ? sections[0].id : null;
+  Object.keys(dict).forEach(c=>{ if(dict[c].section===id) dict[c].section = fallback; });
+  delete dashboard[id]; renderAll();
+}
+function addDashboardOnlySection(){
+  const inp = document.getElementById('new-dash-section');
+  const name = inp.value.trim(); if(!name) return;
+  const s = {id:newId(), name}; dashboardOnlySections.push(s); dashboard[s.id]=[]; inp.value=''; renderDashboard();
+}
+
+function renderDictionary(){
+  const wrap = document.getElementById('dict-wrap');
+  if(columns.length===0){ wrap.innerHTML=''; wrap.closest('.card').style.display='none'; return; }
+  wrap.closest('.card').style.display='';
+  const t = document.getElementById('dict-table');
+  let head = '<tr><th style="width:32%">Full verbatim text</th><th style="width:20%">Short label</th><th>Type</th><th>Section</th></tr>';
+  let body = columns.map(c=>`<tr title="${c.replace(/"/g,'&quot;')}">
+      <td style="white-space:normal;max-width:340px;color:var(--text-2);font-size:11.5px">${c}</td>
+      <td><input class="qd-input mono" value="${dict[c].short}" onchange="updateShortLabel('${c.replace(/'/g,"\\'")}', this.value)"></td>
+      <td><select onchange="dict['${c.replace(/'/g,"\\'")}'].type=this.value; renderAll();">
+        ${['Categorical','Numeric','Multi-response'].map(t=>`<option ${dict[c].type===t?'selected':''}>${t}</option>`).join('')}
+      </select></td>
+      <td><select onchange="dict['${c.replace(/'/g,"\\'")}'].section=this.value; saveState();">
+        ${sections.map(s=>`<option value="${s.id}" ${dict[c].section===s.id?'selected':''}>${s.name}</option>`).join('')}
+      </select></td></tr>`).join('');
+  t.innerHTML = head+body;
+}
+
+/* ============================= PREVIEW / ETL ============================= */
+function emptyState(msg){ return `<div class="empty-panel">${msg||'Upload a dataset on the Upload &amp; Preview tab to get started.'}</div>`; }
+
+function renderPreview(){
+  const wrap = document.getElementById('preview-wrap');
+  if(columns.length===0){ wrap.innerHTML = emptyState('No file uploaded yet.'); document.getElementById('preview-hint').textContent=''; return; }
+  const t = document.createElement('table'); t.id='preview-table';
+  let head = '<tr>'+columns.map(c=>`<th>${dict[c].short}<div style="font-weight:400;text-transform:none;color:var(--text-2);font-size:10px;margin-top:2px">${dict[c].type} · ${pctMissing(c)}% missing</div></th>`).join('')+'</tr>';
+  let body = rows.slice(0,10).map(r=>'<tr>'+columns.map(c=>`<td>${String(r[c]).slice(0,40)}</td>`).join('')+'</tr>').join('');
+  t.innerHTML = head+body;
+  wrap.innerHTML=''; wrap.appendChild(t);
+  document.getElementById('preview-hint').textContent = 'Showing first 10 of '+rows.length+' rows';
+}
+function renderClean(){
+  const body = document.getElementById('clean-body');
+  if(columns.length===0){ body.innerHTML = emptyState(); return; }
+  let head = '<tr><th>Question</th><th style="min-width:180px">Short label</th><th>Type</th><th>% Missing</th><th>Action</th></tr>';
+  let rowsHtml = columns.map(c=>{
+    const m = pctMissing(c);
+    return `<tr><td style="white-space:normal;max-width:260px">${c}</td>
+      <td><input class="qd-input mono" value="${dict[c].short}" onchange="updateShortLabel('${c.replace(/'/g,"\\'")}', this.value)"></td>
+      <td>${dict[c].type}</td>
+      <td><span class="miss-bar"><i style="width:${m}%"></i></span>${m}%</td>
+      <td><select style="font-size:11px;padding:4px 6px"><option>Leave as-is</option><option>Exclude variable</option><option>Impute</option><option>"Prefer not to answer"</option></select></td></tr>`;
+  }).join('');
+  body.innerHTML = `<div class="card"><div class="grid-wrap"><table>${head+rowsHtml}</table></div></div>
+  <div class="card"><div class="card-h"><h3>Straight-lining &amp; speeder check</h3></div>
+  <p style="color:var(--text-1);font-size:12.5px;line-height:1.6;margin:0">No straight-lining detected across grid-style questions. No completion-time outliers flagged. <span style="color:var(--text-2)">— demo pass; wire to real audit rules on ingest.</span></p></div>`;
+}
+
+/* ============================= HELPERS: freq / chart / export ============================= */
+function freqOf(col){
+  const counts = {};
+  rows.forEach(r=>{ const v = r[col]===""? "(blank)": String(r[col]); counts[v]=(counts[v]||0)+1; });
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+}
+function maFreqOf(col){
+  const counts = {};
+  rows.forEach(r=>{
+    const val = r[col]; if(!val) return;
+    String(val).split(',').map(s=>s.trim()).filter(Boolean).forEach(item=>{ counts[item]=(counts[item]||0)+1; });
+  });
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+}
+function tableHtml(headers, rowsArr){
+  return '<div class="grid-wrap"><table><tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr>'+
+    rowsArr.map(r=>'<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('')+'</table></div>';
+}
+
+/* ---- chart style state ---- */
+function getStyle(canvasId){
+  if(!chartStyle[canvasId]) chartStyle[canvasId] = {color:'#C6FF3D', grid:true, xLabels:true, yLabels:true, fontSize:10};
+  return chartStyle[canvasId];
+}
+function chartCustomControls(canvasId, redrawFn){
+  const s = getStyle(canvasId);
+  return `<div class="chart-custom">
+    <div class="grp"><label class="field-label" style="margin:0">Color</label><input type="color" value="${s.color}" onchange="getStyle('${canvasId}').color=this.value; ${redrawFn}();"></div>
+    <label class="grp"><input type="checkbox" ${s.grid?'checked':''} onchange="getStyle('${canvasId}').grid=this.checked; ${redrawFn}();"> Gridlines</label>
+    <label class="grp"><input type="checkbox" ${s.xLabels?'checked':''} onchange="getStyle('${canvasId}').xLabels=this.checked; ${redrawFn}();"> Horizontal labels</label>
+    <label class="grp"><input type="checkbox" ${s.yLabels?'checked':''} onchange="getStyle('${canvasId}').yLabels=this.checked; ${redrawFn}();"> Vertical labels</label>
+    <label class="grp">Font size <input type="number" min="8" max="16" value="${s.fontSize}" style="width:52px" onchange="getStyle('${canvasId}').fontSize=parseInt(this.value)||10; ${redrawFn}();"></label>
+  </div>`;
+}
+function renderChart(canvasId, type, labels, data, opts={}){
+  if(chartRegistry[canvasId]) chartRegistry[canvasId].destroy();
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const style = getStyle(canvasId);
+  const barColor = opts.color || style.color;
+  const isPie = type==='pie';
+  const isStacked = type==='stacked';
+  const isLine = type==='line';
+  let datasets;
+  if(isStacked && opts.series){
+    datasets = opts.series.map((s,i)=>({label:s.label, data:s.data, backgroundColor: PALETTE[i%PALETTE.length]}));
+  } else if(isPie){
+    datasets = [{data, backgroundColor: labels.map((_,i)=>PALETTE[i%PALETTE.length])}];
+  } else if(isLine){
+    datasets = [{data, borderColor: barColor, backgroundColor:'transparent', tension:.25, pointRadius:2, borderWidth:2}];
+  } else {
+    datasets = [{data, backgroundColor: barColor, borderRadius:4, barThickness: opts.thick}];
+  }
+  chartRegistry[canvasId] = new Chart(ctx, {
+    type: isPie?'pie':(isLine?'line':'bar'),
+    data:{labels, datasets},
+    options:{
+      indexAxis: opts.horizontal?'y':'x',
+      responsive:true, maintainAspectRatio:false,
+      scales: isPie? {} : {
+        x:{stacked:isStacked, grid:{display:style.grid,color:'#1e252c'}, ticks:{display:style.xLabels, color:'#8B929C', font:{size:style.fontSize}}},
+        y:{stacked:isStacked, grid:{display:style.grid,color:'#1e252c'}, ticks:{display:style.yLabels, color:'#8B929C', font:{size:style.fontSize}}}
+      },
+      plugins:{
+        legend:{display:isPie||isStacked, labels:{color:'#B7BFC8',font:{size:style.fontSize}}},
+        datalabels:{
+          display: !isStacked,
+          color: isPie ? '#0A0D10' : '#EDEFF2',
+          font:{size:style.fontSize,weight:'700'},
+          formatter:(val)=> opts.suffix? val+opts.suffix : val,
+          anchor: isPie? 'center':'end', align: isPie? 'center':'end', offset: isPie?0:2
+        }
+      }
+    }
+  });
+}
+function chartTypeSelector(id, opts){
+  return `<select id="${id}" onchange="${opts.onchange}">
+    <option value="column">Column</option><option value="pie">Pie</option>
+    ${opts.stacked? '<option value="stacked">Stacked</option>':''}
+    <option value="line">Line</option>
+  </select>`;
+}
+function pinFormControls(prefix){
+  return `<div class="field-row" style="margin-top:14px;margin-bottom:0;align-items:center">
+    <div><label class="field-label">Pin as</label><select id="${prefix}-form"><option value="chart">Chart</option><option value="table">Table</option></select></div>
+    <div><label class="field-label">Dashboard section</label><select id="${prefix}-section">${allDashboardSections().map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+    <button class="btn small" onclick="pinCurrent('${prefix}')">Pin to Dashboard</button>
+  </div>`;
+}
+function pinCurrent(prefix){
+  const buf = window._pinBuffer && window._pinBuffer[prefix];
+  if(!buf) return;
+  const form = document.getElementById(prefix+'-form').value;
+  const section = document.getElementById(prefix+'-section').value;
+  let html;
+  if(form==='chart' && buf.canvasId && chartRegistry[buf.canvasId]) html = `<img src="${chartRegistry[buf.canvasId].toBase64Image()}">`;
+  else html = tableHtml(buf.headers, buf.rowsArr);
+  dashboard[section] = dashboard[section] || [];
+  dashboard[section].push({id:Date.now()+Math.random(), title:buf.title, html});
+  renderDashboard(); renderInsightsSrc();
+  const btn = event.target; const old = btn.textContent;
+  btn.textContent='✓ Pinned'; setTimeout(()=>btn.textContent=old,1300);
+}
+function exportPNG(canvasId, filename){
+  if(!chartRegistry[canvasId]) return;
+  const link=document.createElement('a'); link.download=filename+'.png'; link.href=chartRegistry[canvasId].toBase64Image(); link.click();
+}
+function exportExcel(headers, rowsArr, filename){ // plain, data-only (used for Kano, which has no chart)
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rowsArr]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  XLSX.writeFile(wb, filename+'.xlsx');
+}
+
+/* ============================================================================
+   NATIVE EDITABLE EXCEL CHART EXPORT
+   Hand-built OOXML (worksheet + drawing + chart parts) zipped with JSZip.
+   Produces a real .xlsx with the data on a sheet AND a genuine, editable
+   Excel chart object bound to that data — not a flattened picture.
+   chartHeaders[0] = category column; remaining columns = numeric series.
+============================================================================ */
+function xEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;'); }
+function colLetter(n){ let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; }
+
+function buildSheetXml(headers, rowsArr){
+  const nCols = headers.length, nRows = rowsArr.length;
+  let sheetRows = '<row r="1">'+headers.map((h,i)=>`<c r="${colLetter(i+1)}1" t="inlineStr"><is><t>${xEsc(h)}</t></is></c>`).join('')+'</row>';
+  rowsArr.forEach((r,ri)=>{
+    const rn = ri+2;
+    const cells = r.map((v,ci)=>{
+      const ref = colLetter(ci+1)+rn;
+      if(ci===0) return `<c r="${ref}" t="inlineStr"><is><t>${xEsc(v)}</t></is></c>`;
+      const num = parseFloat(v); return `<c r="${ref}"><v>${isNaN(num)?0:num}</v></c>`;
+    }).join('');
+    sheetRows += `<row r="${rn}">${cells}</row>`;
+  });
+  const dim = `A1:${colLetter(nCols)}${nRows+1}`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<dimension ref="${dim}"/>
+<sheetViews><sheetView tabSelected="1" workbookViewId="0"/></sheetViews>
+<sheetFormatPr defaultRowHeight="15"/>
+<sheetData>${sheetRows}</sheetData>
+<drawing r:id="rId1"/>
+</worksheet>`;
+}
+function buildChartXml(title, headers, rowsArr, chartType){
+  const nRows = rowsArr.length;
+  const seriesCount = headers.length-1;
+  const catRange = `Data!$A$2:$A$${nRows+1}`;
+  const catPts = rowsArr.map((r,i)=>`<c:pt idx="${i}"><c:v>${xEsc(r[0])}</c:v></c:pt>`).join('');
+  const catXml = `<c:cat><c:strRef><c:f>${catRange}</c:f><c:strCache><c:ptCount val="${nRows}"/>${catPts}</c:strCache></c:strRef></c:cat>`;
+
+  function seriesXml(idx, colIdx){
+    const colL = colLetter(colIdx);
+    const valRange = `Data!$${colL}$2:$${colL}$${nRows+1}`;
+    const nameRef = `Data!$${colL}$1`;
+    const valPts = rowsArr.map((r,i)=>{ const n=parseFloat(r[colIdx-1]); return `<c:pt idx="${i}"><c:v>${isNaN(n)?0:n}</c:v></c:pt>`; }).join('');
+    return `<c:ser>
+      <c:idx val="${idx}"/><c:order val="${idx}"/>
+      <c:tx><c:strRef><c:f>${nameRef}</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>${xEsc(headers[colIdx-1])}</c:v></c:pt></c:strCache></c:strRef></c:tx>
+      <c:spPr><a:solidFill><a:srgbClr val="${PALETTE[idx%PALETTE.length].replace('#','')}"/></a:solidFill></c:spPr>
+      ${catXml}
+      <c:val><c:numRef><c:f>${valRange}</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="${nRows}"/>${valPts}</c:numCache></c:numRef></c:val>
+    </c:ser>`;
+  }
+
+  let bodyChart, plotExtra='';
+  if(chartType==='pie'){
+    const series = seriesXml(0,2);
+    bodyChart = `<c:pieChart><c:varyColors val="1"/>${series}<c:firstSliceAng val="0"/></c:pieChart>`;
+  } else if(chartType==='line'){
+    let series=''; for(let i=2;i<=headers.length;i++) series += seriesXml(i-2, i);
+    bodyChart = `<c:lineChart><c:grouping val="standard"/><c:marker val="1"/>${series}<c:marker val="1"/><c:axId val="111111111"/><c:axId val="222222222"/></c:lineChart>`;
+    plotExtra = `<c:catAx><c:axId val="111111111"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:crossAx val="222222222"/></c:catAx>
+      <c:valAx><c:axId val="222222222"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:crossAx val="111111111"/></c:valAx>`;
+  } else {
+    const grouping = chartType==='stacked' ? 'stacked' : 'clustered';
+    let series=''; for(let i=2;i<=headers.length;i++) series += seriesXml(i-2, i);
+    bodyChart = `<c:barChart><c:barDir val="col"/><c:grouping val="${grouping}"/>${series}<c:axId val="111111111"/><c:axId val="222222222"/></c:barChart>`;
+    plotExtra = `<c:catAx><c:axId val="111111111"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:crossAx val="222222222"/></c:catAx>
+      <c:valAx><c:axId val="222222222"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:crossAx val="111111111"/></c:valAx>`;
+  }
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<c:chart>
+<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>${xEsc(title)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>
+<c:autoTitleDeleted val="0"/>
+<c:plotArea><c:layout/>${bodyChart}${plotExtra}</c:plotArea>
+<c:legend><c:legendPos val="b"/></c:legend>
+<c:plotVisOnly val="1"/>
+</c:chart>
+</c:chartSpace>`;
+}
+const CONTENT_TYPES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>
+<Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+</Types>`;
+const RELS_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+const WORKBOOK_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="Data" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`;
+const WORKBOOK_RELS_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>
+<fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>
+</styleSheet>`;
+const SHEET_RELS_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>
+</Relationships>`;
+const DRAWING_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+<xdr:twoCellAnchor>
+<xdr:from><xdr:col>3</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+<xdr:to><xdr:col>13</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>22</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>
+<xdr:graphicFrame macro="">
+<xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Chart 1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>
+<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>
+<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart">
+<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rId1"/>
+</a:graphicData></a:graphic>
+</xdr:graphicFrame>
+<xdr:clientData/>
+</xdr:twoCellAnchor>
+</xdr:wsDr>`;
+const DRAWING_RELS_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+</Relationships>`;
+
+async function exportEditableExcel(title, headers, rowsArr, chartType, filename){
+  try{
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', CONTENT_TYPES_XML);
+    zip.file('_rels/.rels', RELS_XML);
+    zip.file('xl/workbook.xml', WORKBOOK_XML);
+    zip.file('xl/_rels/workbook.xml.rels', WORKBOOK_RELS_XML);
+    zip.file('xl/styles.xml', STYLES_XML);
+    zip.file('xl/worksheets/sheet1.xml', buildSheetXml(headers, rowsArr));
+    zip.file('xl/worksheets/_rels/sheet1.xml.rels', SHEET_RELS_XML);
+    zip.file('xl/drawings/drawing1.xml', DRAWING_XML);
+    zip.file('xl/drawings/_rels/drawing1.xml.rels', DRAWING_RELS_XML);
+    zip.file('xl/charts/chart1.xml', buildChartXml(title, headers, rowsArr, chartType==='stacked'?'stacked':(chartType==='pie'?'pie':(chartType==='line'?'line':'column'))));
+    const blob = await zip.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download = filename+'.xlsx'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }catch(err){
+    alert('Could not build the editable Excel file: '+err.message+'. Falling back to a data-only export.');
+    exportExcel(headers, rowsArr, filename);
+  }
+}
+function exportModuleExcel(key){
+  const buf = window._chartBuffer && window._chartBuffer[key];
+  if(!buf) return;
+  exportEditableExcel(buf.title, buf.headers, buf.rows, buf.type, buf.filename);
+}
+
+/* ============================= ANALYSIS MODULES ============================= */
+function renderModule(mod){
+  currentMod = mod;
+  document.querySelectorAll('.module-card').forEach(el=>el.classList.toggle('active', el.dataset.mod===mod));
+  const body = document.getElementById('module-body');
+  if(columns.length===0){ body.innerHTML = emptyState(); return; }
+  window._pinBuffer = window._pinBuffer || {};
+  window._chartBuffer = window._chartBuffer || {};
+
+  if(mod==='freq'){
+    const catCols = columns.filter(c=>dict[c].type!=='Numeric');
+    body.innerHTML = `<div class="card">
+      <div class="field-row">
+        <div><label class="field-label">Question</label><select id="freq-col">${catCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+        <div><label class="field-label">Display</label><select id="freq-view"><option value="pct">%</option><option value="n">Count (n)</option></select></div>
+        <div><label class="field-label">Chart type</label>${chartTypeSelector('freq-type',{onchange:'drawFreq()'})}</div>
+        <button class="btn secondary small" onclick="drawFreq()">Update</button>
+      </div>
+      <div class="two-col">
+        <div class="chart-box"><canvas id="chart-freq"></canvas></div>
+        <div id="freq-table"></div>
+      </div>
+      ${chartCustomControls('chart-freq','drawFreq')}
+      <div class="download-row">
+        <button class="btn secondary small" onclick="exportPNG('chart-freq','frequency')">Download PNG</button>
+        <button class="btn secondary small" onclick="exportModuleExcel('freq')">Download Excel (editable chart)</button>
+      </div>
+      ${pinFormControls('freq')}
+    </div>`;
+    ['freq-col','freq-view'].forEach(id=>document.getElementById(id).addEventListener('change', drawFreq));
+    drawFreq();
+  }
+
+  else if(mod==='cross'){
+    const catCols = columns.filter(c=>dict[c].type!=='Numeric');
+    body.innerHTML = `<div class="card">
+      <div class="field-row">
+        <div><label class="field-label">Row question</label><select id="cross-row">${catCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+        <div><label class="field-label">Banner (columns)</label><select id="cross-col">${catCols.map((c,i)=>`<option value="${c}" ${i===1?'selected':''}>${dict[c].short}</option>`).join('')}</select></div>
+        <div><label class="field-label">Chart type</label>${chartTypeSelector('cross-type',{onchange:'drawCross()',stacked:true})}</div>
+        <button class="btn secondary small" onclick="drawCross()">Update</button>
+      </div>
+      <div id="cross-table-wrap" class="grid-wrap" style="margin-bottom:14px"></div>
+      <div class="chart-box"><canvas id="chart-cross"></canvas></div>
+      ${chartCustomControls('chart-cross','drawCross')}
+      <div class="download-row">
+        <button class="btn secondary small" onclick="exportPNG('chart-cross','cross_tab')">Download PNG</button>
+        <button class="btn secondary small" onclick="exportModuleExcel('cross')">Download Excel (editable chart)</button>
+      </div>
+      ${pinFormControls('cross')}
+    </div>`;
+    document.getElementById('cross-type').value='stacked';
+    ['cross-row','cross-col'].forEach(id=>document.getElementById(id).addEventListener('change', drawCross));
+    drawCross();
+  }
+
+  else if(mod==='multi'){
+    const maCols = columns.filter(c=>dict[c].type==='Multi-response');
+    if(maCols.length===0){ body.innerHTML = emptyState('No columns are marked "Multi-response" in the Question Dictionary yet. Set a column type there first.'); return; }
+    body.innerHTML = `<div class="card">
+      <div class="field-row">
+        <div><label class="field-label">Multi-response question</label><select id="multi-col">${maCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+        <div><label class="field-label">Base</label><select id="multi-base"><option value="resp">% of respondents</option><option value="mention">% of mentions</option></select></div>
+        <div><label class="field-label">Chart type</label>${chartTypeSelector('multi-type',{onchange:'drawMulti()'})}</div>
+        <button class="btn secondary small" onclick="drawMulti()">Update</button>
+      </div>
+      <div class="two-col">
+        <div class="chart-box" style="height:340px"><canvas id="chart-multi"></canvas></div>
+        <div id="multi-table" style="max-height:340px;overflow-y:auto"></div>
+      </div>
+      ${chartCustomControls('chart-multi','drawMulti')}
+      <div class="download-row">
+        <button class="btn secondary small" onclick="exportPNG('chart-multi','multi_response')">Download PNG</button>
+        <button class="btn secondary small" onclick="exportModuleExcel('multi')">Download Excel (editable chart)</button>
+      </div>
+      ${pinFormControls('multi')}
+    </div>`;
+    ['multi-col','multi-base'].forEach(id=>document.getElementById(id).addEventListener('change', drawMulti));
+    drawMulti();
+  }
+
+  else if(mod==='desc'){
+    const numCols = columns.filter(c=>dict[c].type==='Numeric');
+    if(numCols.length===0){ body.innerHTML = emptyState('No columns are marked "Numeric" in the Question Dictionary yet.'); return; }
+    body.innerHTML = `<div class="card">
+      <div class="field-row">
+        <div><label class="field-label">Numeric variable</label><select id="desc-col">${numCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+        <button class="btn secondary small" onclick="drawDesc()">Update</button>
+      </div>
+      <div class="stat-row" id="desc-stats"></div>
+      <div class="two-col">
+        <div class="chart-box"><canvas id="chart-desc"></canvas></div>
+        <div id="desc-table"></div>
+      </div>
+      ${chartCustomControls('chart-desc','drawDesc')}
+      <div class="download-row">
+        <button class="btn secondary small" onclick="exportPNG('chart-desc','descriptives')">Download PNG</button>
+        <button class="btn secondary small" onclick="exportModuleExcel('desc')">Download Excel (editable chart)</button>
+      </div>
+      ${pinFormControls('desc')}
+    </div>`;
+    document.getElementById('desc-col').addEventListener('change', drawDesc);
+    drawDesc();
+  }
+
+  else if(mod==='vw') renderVanWestendorp(body);
+  else if(mod==='gg') renderGaborGranger(body);
+  else if(mod==='md') renderMaxDiff(body);
+  else if(mod==='cj') renderConjoint(body);
+  else if(mod==='kano') renderKano(body);
+}
+
+function drawFreq(){
+  const col = document.getElementById('freq-col').value;
+  const view = document.getElementById('freq-view').value;
+  const type = document.getElementById('freq-type').value;
+  const data = freqOf(col); const total = rows.length;
+  const labels = data.map(d=>d[0]);
+  const metricLabel = view==='pct'?'%':'n';
+  const vals = view==='pct'? data.map(d=>Math.round(d[1]/total*1000)/10) : data.map(d=>d[1]);
+  renderChart('chart-freq', type, labels, vals, {horizontal:type!=='pie'&&type!=='line', thick:22, suffix: view==='pct'?'%':''});
+  document.getElementById('freq-table').innerHTML = tableHtml(['Value','n','%'], data.map(d=>[d[0], d[1], Math.round(d[1]/total*1000)/10+'%']));
+  window._pinBuffer['freq'] = {canvasId:'chart-freq', title:dict[col].short+' — Frequency', headers:['Value','n','%'], rowsArr:data.map(d=>[d[0],d[1],Math.round(d[1]/total*1000)/10])};
+  window._chartBuffer['freq'] = {title:dict[col].short+' — Frequency', headers:['Value', metricLabel], rows: labels.map((l,i)=>[l, vals[i]]), type: type==='stacked'?'column':type, filename:'frequency'};
+}
+
+function drawCross(){
+  const rowCol = document.getElementById('cross-row').value;
+  const colCol = document.getElementById('cross-col').value;
+  const type = document.getElementById('cross-type').value;
+  const rowVals = [...new Set(rows.map(r=>r[rowCol]))].filter(v=>v!=="");
+  const colVals = [...new Set(rows.map(r=>r[colCol]))].filter(v=>v!=="").slice(0,5);
+  const colBase = {}; colVals.forEach(cv=>colBase[cv]=rows.filter(r=>r[colCol]===cv).length);
+
+  let head = '<tr><th>'+dict[rowCol].short+'</th>'+colVals.map(cv=>`<th>${cv} (n=${colBase[cv]})</th>`).join('')+'</tr>';
+  let bodyRows = rowVals.map(rv=>{
+    let cells = colVals.map(cv=>{
+      const n = rows.filter(r=>r[rowCol]===rv && r[colCol]===cv).length;
+      const pct = colBase[cv]? Math.round(n/colBase[cv]*1000)/10 : 0;
+      return `<td>${pct}%</td>`;
+    }).join('');
+    return `<tr><td>${rv}</td>${cells}</tr>`;
+  }).join('');
+  document.getElementById('cross-table-wrap').innerHTML = '<table>'+head+bodyRows+'</table>';
+
+  const series = colVals.map(cv=>({label:cv, data: rowVals.map(rv=>{
+    const n = rows.filter(r=>r[rowCol]===rv && r[colCol]===cv).length;
+    return colBase[cv]? Math.round(n/colBase[cv]*1000)/10 : 0;
+  })}));
+  let pieLabels=null, pieVals=null;
+  if(type==='pie'){
+    const overall = rowVals.map(rv=> rows.filter(r=>r[rowCol]===rv).length);
+    pieLabels=rowVals; pieVals=overall;
+    renderChart('chart-cross','pie', rowVals, overall, {});
+  } else {
+    renderChart('chart-cross', type==='stacked'?'stacked':type, rowVals, [], {series, suffix:'%'});
+  }
+  const exportRows = rowVals.map((rv,i)=>[rv, ...colVals.map(cv=>series.find(s=>s.label===cv).data[i])]);
+  window._pinBuffer['cross'] = {canvasId:'chart-cross', title:dict[rowCol].short+' × '+dict[colCol].short, headers:[dict[rowCol].short, ...colVals], rowsArr:exportRows};
+  if(type==='pie'){
+    window._chartBuffer['cross'] = {title:dict[rowCol].short+' × '+dict[colCol].short, headers:[dict[rowCol].short,'Count'], rows: pieLabels.map((l,i)=>[l,pieVals[i]]), type:'pie', filename:'cross_tab'};
+  } else {
+    window._chartBuffer['cross'] = {title:dict[rowCol].short+' × '+dict[colCol].short, headers:[dict[rowCol].short, ...colVals], rows: exportRows, type: type==='stacked'?'stacked':(type==='line'?'line':'column'), filename:'cross_tab'};
+  }
+}
+
+function drawMulti(){
+  const col = document.getElementById('multi-col').value;
+  const base = document.getElementById('multi-base').value;
+  const type = document.getElementById('multi-type').value;
+  const data = maFreqOf(col);
+  const total = rows.filter(r=>r[col]).length;
+  const totalMentions = data.reduce((s,d)=>s+d[1],0);
+  const labels = data.map(d=>d[0].length>28? d[0].slice(0,28)+'…':d[0]);
+  const vals = base==='resp'? data.map(d=>Math.round(d[1]/total*1000)/10) : data.map(d=>Math.round(d[1]/totalMentions*1000)/10);
+  const metricLabel = base==='resp'? '% of respondents':'% of mentions';
+  renderChart('chart-multi', type, labels, vals, {horizontal:type!=='pie'&&type!=='line', thick:16, color:'#8FBF1E', suffix:'%'});
+  document.getElementById('multi-table').innerHTML = tableHtml(['Item','n','%'], data.map((d,i)=>[d[0], d[1], vals[i]+'%']));
+  window._pinBuffer['multi'] = {canvasId:'chart-multi', title:dict[col].short+' — % of respondents', headers:['Item','n','%'], rowsArr:data.map((d,i)=>[d[0],d[1],vals[i]])};
+  window._chartBuffer['multi'] = {title:dict[col].short, headers:['Item', metricLabel], rows: labels.map((l,i)=>[l, vals[i]]), type: type==='stacked'?'column':type, filename:'multi_response'};
+}
+
+function mean(arr){return arr.reduce((a,b)=>a+b,0)/arr.length;}
+function stdev(arr){const m=mean(arr); return Math.sqrt(mean(arr.map(x=>(x-m)**2)));}
+function drawDesc(){
+  const col = document.getElementById('desc-col').value;
+  const vals = rows.map(r=>parseFloat(r[col])).filter(v=>!isNaN(v));
+  const sorted=[...vals].sort((a,b)=>a-b);
+  const med = sorted[Math.floor(sorted.length/2)];
+  document.getElementById('desc-stats').innerHTML = `
+    <div class="stat-box"><div class="v">${mean(vals).toFixed(1)}</div><div class="l">Mean</div></div>
+    <div class="stat-box"><div class="v">${med}</div><div class="l">Median</div></div>
+    <div class="stat-box"><div class="v">${stdev(vals).toFixed(1)}</div><div class="l">Std dev</div></div>
+    <div class="stat-box"><div class="v">${sorted[0]}–${sorted[sorted.length-1]}</div><div class="l">Min–Max</div></div>`;
+  const bins = 6; const min=sorted[0], max=sorted[sorted.length-1]; const w=(max-min)/bins||1;
+  const counts = new Array(bins).fill(0);
+  vals.forEach(v=>{let idx=Math.min(bins-1, Math.floor((v-min)/w)); counts[idx]++;});
+  const labels = counts.map((_,i)=>Math.round(min+i*w)+'–'+Math.round(min+(i+1)*w));
+  renderChart('chart-desc','column',labels,counts,{});
+  document.getElementById('desc-table').innerHTML = tableHtml(['Bucket','n'], labels.map((l,i)=>[l,counts[i]]));
+  window._pinBuffer['desc'] = {canvasId:'chart-desc', title:dict[col].short+' — Descriptives', headers:['Bucket','n'], rowsArr:labels.map((l,i)=>[l,counts[i]])};
+  window._chartBuffer['desc'] = {title:dict[col].short+' — Distribution', headers:['Bucket','n'], rows: labels.map((l,i)=>[l,counts[i]]), type:'column', filename:'descriptives'};
+}
+
+/* ============================= ADVANCED: workable, driven from the Dictionary ============================= */
+// ---- Van Westendorp ----
+function renderVanWestendorp(body){
+  const numCols = columns.filter(c=>dict[c].type==='Numeric');
+  body.innerHTML = `<div class="card">
+    <p class="small-note">Pick four numeric price questions from your Question Dictionary. Mark those columns "Numeric" in the Dictionary if they aren't already.</p>
+    <div class="field-row">
+      <div><label class="field-label">Too cheap</label><select id="vw-tc">${numCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+      <div><label class="field-label">Cheap</label><select id="vw-c">${numCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+      <div><label class="field-label">Expensive</label><select id="vw-e">${numCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+      <div><label class="field-label">Too expensive</label><select id="vw-te">${numCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+      <button class="btn secondary small" onclick="computeVW()">Run analysis</button>
+    </div>
+    <div id="vw-results"></div>
+  </div>`;
+  if(numCols.length<4){ document.getElementById('vw-results').innerHTML = `<p style="color:var(--warn);font-size:12.5px">Fewer than 4 numeric columns are available — mark relevant price columns "Numeric" in the Question Dictionary.</p>`; }
+}
+function computeVW(){
+  const tc=document.getElementById('vw-tc').value, c=document.getElementById('vw-c').value, e=document.getElementById('vw-e').value, te=document.getElementById('vw-te').value;
+  const out = document.getElementById('vw-results');
+  const data = rows.map(r=>({tc:parseFloat(r[tc]), c:parseFloat(r[c]), e:parseFloat(r[e]), te:parseFloat(r[te])}))
+    .filter(d=>!isNaN(d.tc)&&!isNaN(d.c)&&!isNaN(d.e)&&!isNaN(d.te));
+  if(data.length<5){ out.innerHTML = `<p style="color:var(--danger);font-size:12.5px">Fewer than 5 respondents have complete numeric answers across all four questions — can't compute reliable curves.</p>`; return; }
+  const N=data.length;
+  const allVals = data.flatMap(d=>[d.tc,d.c,d.e,d.te]);
+  const min=Math.min(...allVals), max=Math.max(...allVals);
+  const steps=14; const points=[]; for(let i=0;i<=steps;i++) points.push(Math.round(min+(max-min)*i/steps));
+  const curve = (field,dir)=> points.map(p=> Math.round((dir==='asc'? data.filter(d=>d[field]<=p).length : data.filter(d=>d[field]>=p).length)/N*1000)/10 );
+  const tooCheapCurve=curve('tc','asc'), cheapCurve=curve('c','asc'), expensiveCurve=curve('e','desc'), tooExpensiveCurve=curve('te','desc');
+  function intersect(a,b){
+    for(let i=0;i<points.length-1;i++){
+      const a1=a[i]-b[i], a2=a[i+1]-b[i+1];
+      if(a1===0) return points[i];
+      if((a1<0&&a2>0)||(a1>0&&a2<0)){ const t=a1/(a1-a2); return Math.round(points[i]+t*(points[i+1]-points[i])); }
+    }
+    return null;
+  }
+  const PMC = intersect(tooCheapCurve, expensiveCurve);
+  const PME = intersect(cheapCurve, tooExpensiveCurve);
+  const OPP = intersect(tooCheapCurve, tooExpensiveCurve);
+  out.innerHTML = `
+    <div class="two-col">
+      <div class="chart-box" style="height:300px"><canvas id="chart-vw"></canvas></div>
+      <div>
+        <div class="stat-box" style="margin-bottom:8px"><div class="v">${PMC!==null?'PKR '+PMC.toLocaleString():'—'}</div><div class="l">Point of Marginal Cheapness</div></div>
+        <div class="stat-box" style="margin-bottom:8px"><div class="v">${OPP!==null?'PKR '+OPP.toLocaleString():'—'}</div><div class="l">Optimal Price Point</div></div>
+        <div class="stat-box"><div class="v">${PME!==null?'PKR '+PME.toLocaleString():'—'}</div><div class="l">Point of Marginal Expensiveness</div></div>
+      </div>
+    </div>
+    <div id="vw-table-wrap" style="margin-top:14px"></div>
+    <div class="callout">${OPP!==null?`<b>Auto-annotation:</b> Optimal price sits near ${OPP.toLocaleString()}. Below ${PMC?.toLocaleString()}, a meaningful share reads the price as suspiciously cheap; above ${PME?.toLocaleString()}, "too expensive" becomes the dominant reaction.`:'Curves did not cross within the observed price range.'}</div>
+    ${chartCustomControls('chart-vw','computeVW')}
+    <div class="download-row">
+      <button class="btn secondary small" onclick="exportPNG('chart-vw','van_westendorp')">Download PNG</button>
+      <button class="btn secondary small" onclick="exportModuleExcel('vw')">Download Excel (editable chart)</button>
+    </div>
+    ${pinFormControls('vw')}`;
+  const style = getStyle('chart-vw');
+  if(chartRegistry['chart-vw']) chartRegistry['chart-vw'].destroy();
+  chartRegistry['chart-vw'] = new Chart(document.getElementById('chart-vw').getContext('2d'), {
+    type:'line',
+    data:{labels:points.map(p=>'PKR '+Math.round(p/1000)+'K'), datasets:[
+      {label:'Too cheap', data:tooCheapCurve, borderColor: style.color, backgroundColor:'transparent', tension:.25},
+      {label:'Cheap', data:cheapCurve, borderColor:'#3DD9A0', backgroundColor:'transparent', tension:.25},
+      {label:'Expensive', data:expensiveCurve, borderColor:'#FF9752', backgroundColor:'transparent', tension:.25},
+      {label:'Too expensive', data:tooExpensiveCurve, borderColor:'#FF6B5B', backgroundColor:'transparent', tension:.25}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#B7BFC8',font:{size:style.fontSize}}},datalabels:{display:false}},
+      scales:{x:{grid:{display:style.grid,color:'#1e252c'},ticks:{display:style.xLabels,color:'#8B929C',font:{size:style.fontSize}}}, y:{grid:{display:style.grid,color:'#1e252c'},ticks:{display:style.yLabels,color:'#8B929C',font:{size:style.fontSize}}}}}
+  });
+  const tableRows = points.map((p,i)=>[p, tooCheapCurve[i]+'%', cheapCurve[i]+'%', expensiveCurve[i]+'%', tooExpensiveCurve[i]+'%']);
+  document.getElementById('vw-table-wrap').innerHTML = tableHtml(['Price','Too cheap %','Cheap %','Expensive %','Too expensive %'], tableRows);
+  window._pinBuffer = window._pinBuffer||{};
+  window._pinBuffer['vw'] = {canvasId:'chart-vw', title:'Van Westendorp — Price Sensitivity', headers:['Price','Too cheap %','Cheap %','Expensive %','Too expensive %'], rowsArr: points.map((p,i)=>[p,tooCheapCurve[i],cheapCurve[i],expensiveCurve[i],tooExpensiveCurve[i]])};
+  window._chartBuffer = window._chartBuffer||{};
+  window._chartBuffer['vw'] = {title:'Van Westendorp — Price Sensitivity', headers:['Price','Too cheap %','Cheap %','Expensive %','Too expensive %'], rows: points.map((p,i)=>['PKR '+p,tooCheapCurve[i],cheapCurve[i],expensiveCurve[i],tooExpensiveCurve[i]]), type:'line', filename:'van_westendorp'};
+}
+
+// ---- Gabor-Granger ----
+let ggRows = [];
+function renderGaborGranger(body){
+  if(ggRows.length===0) ggRows = [{col:columns[0], price:'', accept:[]}];
+  body.innerHTML = `<div class="card">
+    <p class="small-note">Build your own price ladder: pick a question fielded at each price point, enter that price, and choose which of its response options count as "would buy."</p>
+    <div id="gg-rows"></div>
+    <button class="btn secondary small" onclick="ggAddRow()">+ Add price point</button>
+    <div style="margin-top:14px"><button class="btn small" onclick="computeGG()">Run analysis</button></div>
+    <div id="gg-results"></div>
+  </div>`;
+  renderGGRows();
+}
+function renderGGRows(){
+  document.getElementById('gg-rows').innerHTML = ggRows.map((r,i)=>{
+    const uniqueVals = [...new Set(rows.map(x=>x[r.col]))].filter(v=>v!=="");
+    return `<div class="field-row" style="border-bottom:1px solid #1e252c;padding-bottom:10px">
+      <div><label class="field-label">Question</label><select onchange="ggRows[${i}].col=this.value; ggRows[${i}].accept=[]; renderGGRows();">${columns.map(c=>`<option value="${c}" ${c===r.col?'selected':''}>${dict[c].short}</option>`).join('')}</select></div>
+      <div><label class="field-label">Price (PKR)</label><input type="number" value="${r.price}" style="width:110px" onchange="ggRows[${i}].price=this.value"></div>
+      <div style="flex:1;min-width:220px"><label class="field-label">Counts as "would buy"</label>
+        <select multiple size="3" style="width:100%" onchange="ggRows[${i}].accept=[...this.selectedOptions].map(o=>o.value)">
+          ${uniqueVals.map(v=>`<option value="${v}" ${r.accept.includes(v)?'selected':''}>${v}</option>`).join('')}
+        </select>
+      </div>
+      <button class="btn secondary small" onclick="ggRows.splice(${i},1); renderGGRows();">Remove</button>
+    </div>`;
+  }).join('');
+}
+function ggAddRow(){ ggRows.push({col:columns[0], price:'', accept:[]}); renderGGRows(); }
+function computeGG(){
+  const valid = ggRows.filter(r=>r.price!=='' && r.accept.length>0);
+  const out = document.getElementById('gg-results');
+  if(valid.length<2){ out.innerHTML = `<p style="color:var(--danger);font-size:12.5px">Add at least two price points with a price and at least one "would buy" response selected.</p>`; return; }
+  const sorted = [...valid].sort((a,b)=>a.price-b.price);
+  const N = rows.length;
+  const intent = sorted.map(r=> Math.round(rows.filter(row=>r.accept.includes(row[r.col])).length/N*1000)/10 );
+  const revenue = sorted.map((r,i)=> Math.round(r.price*intent[i]/100*N));
+  const maxIdx = revenue.indexOf(Math.max(...revenue));
+  out.innerHTML = `
+    <div class="two-col">
+      <div class="chart-box"><canvas id="chart-gg"></canvas></div>
+      <div>
+        <div class="stat-box" style="margin-bottom:8px"><div class="v">PKR ${Number(sorted[maxIdx].price).toLocaleString()}</div><div class="l">Revenue-maximizing price</div></div>
+        <div class="stat-box"><div class="v">${intent[maxIdx]}%</div><div class="l">Purchase intent at that price</div></div>
+      </div>
+    </div>
+    <div id="gg-table-wrap" style="margin-top:14px"></div>
+    ${chartCustomControls('chart-gg','computeGG')}
+    <div class="download-row">
+      <button class="btn secondary small" onclick="exportPNG('chart-gg','gabor_granger')">Download PNG</button>
+      <button class="btn secondary small" onclick="exportModuleExcel('gg')">Download Excel (editable chart)</button>
+    </div>
+    ${pinFormControls('gg')}`;
+  renderChart('chart-gg','column', sorted.map(r=>'PKR '+Number(r.price).toLocaleString()), intent, {suffix:'%'});
+  document.getElementById('gg-table-wrap').innerHTML = tableHtml(['Price','Purchase intent %','Projected revenue'], sorted.map((r,i)=>[Number(r.price).toLocaleString(), intent[i]+'%', revenue[i].toLocaleString()]));
+  window._pinBuffer = window._pinBuffer||{};
+  window._pinBuffer['gg'] = {canvasId:'chart-gg', title:'Gabor-Granger — Demand Curve', headers:['Price','Purchase intent %','Projected revenue'], rowsArr: sorted.map((r,i)=>[r.price,intent[i],revenue[i]])};
+  window._chartBuffer = window._chartBuffer||{};
+  window._chartBuffer['gg'] = {title:'Gabor-Granger — Demand Curve', headers:['Price','Purchase intent %','Projected revenue (PKR)'], rows: sorted.map((r,i)=>['PKR '+r.price,intent[i],revenue[i]]), type:'column', filename:'gabor_granger'};
+}
+
+// ---- Max-Diff ----
+function renderMaxDiff(body){
+  const maCols = columns.filter(c=>dict[c].type==='Multi-response');
+  body.innerHTML = `<div class="card">
+    <p class="small-note">Pick a "best" selections question. Optionally add a "worst"/dislike question to sharpen the score — preference share = normalized (Best% − Worst%).</p>
+    <div class="field-row">
+      <div><label class="field-label">Best selections</label><select id="md-best">${maCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+      <div><label class="field-label">Worst selections (optional)</label><select id="md-worst"><option value="">— none —</option>${maCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+      <button class="btn secondary small" onclick="computeMD()">Run analysis</button>
+    </div>
+    <div id="md-results"></div>
+  </div>`;
+  if(maCols.length===0){ document.getElementById('md-results').innerHTML = `<p style="color:var(--warn);font-size:12.5px">No columns are marked "Multi-response" in the Question Dictionary.</p>`; }
+}
+function computeMD(){
+  const bestCol = document.getElementById('md-best').value;
+  const worstCol = document.getElementById('md-worst').value;
+  if(!bestCol) return;
+  const bestData = maFreqOf(bestCol);
+  const bestTotal = rows.filter(r=>r[bestCol]).length;
+  const worstData = worstCol ? maFreqOf(worstCol) : [];
+  const worstTotal = worstCol ? rows.filter(r=>r[worstCol]).length : 1;
+  const items = [...new Set([...bestData.map(d=>d[0]), ...worstData.map(d=>d[0])])];
+  const scored = items.map(it=>{
+    const bPct = (bestData.find(d=>d[0]===it)?.[1]||0)/bestTotal*100;
+    const wPct = worstCol ? (worstData.find(d=>d[0]===it)?.[1]||0)/worstTotal*100 : 0;
+    return {it, score: bPct-wPct, bPct, wPct};
+  }).sort((a,b)=>b.score-a.score);
+  const minS=Math.min(...scored.map(s=>s.score)), maxS=Math.max(...scored.map(s=>s.score));
+  const share = scored.map(s=> maxS>minS? Math.round((s.score-minS)/(maxS-minS)*1000)/10 : 0);
+  document.getElementById('md-results').innerHTML = `
+    <div class="two-col">
+      <div class="chart-box" style="height:${Math.max(260,items.length*32)}px"><canvas id="chart-md"></canvas></div>
+      <div id="md-table-wrap"></div>
+    </div>
+    ${chartCustomControls('chart-md','computeMD')}
+    <div class="download-row">
+      <button class="btn secondary small" onclick="exportPNG('chart-md','maxdiff')">Download PNG</button>
+      <button class="btn secondary small" onclick="exportModuleExcel('md')">Download Excel (editable chart)</button>
+    </div>
+    ${pinFormControls('md')}`;
+  renderChart('chart-md','column', scored.map(s=>s.it), share, {horizontal:true, thick:16, suffix:'%'});
+  document.getElementById('md-table-wrap').innerHTML = tableHtml(['Item','Best %','Worst %','Preference share'], scored.map((s,i)=>[s.it, Math.round(s.bPct*10)/10+'%', Math.round(s.wPct*10)/10+'%', share[i]+'%']));
+  window._pinBuffer = window._pinBuffer||{};
+  window._pinBuffer['md'] = {canvasId:'chart-md', title:'Max-Diff — Preference Share', headers:['Item','Best %','Worst %','Preference share'], rowsArr:scored.map((s,i)=>[s.it, Math.round(s.bPct*10)/10, Math.round(s.wPct*10)/10, share[i]])};
+  window._chartBuffer = window._chartBuffer||{};
+  window._chartBuffer['md'] = {title:'Max-Diff — Preference Share', headers:['Item','Best %','Worst %','Preference share %'], rows: scored.map((s,i)=>[s.it, Math.round(s.bPct*10)/10, Math.round(s.wPct*10)/10, share[i]]), type:'column', filename:'maxdiff'};
+}
+
+// ---- Conjoint (Borda-count importance from a ranked-order multi-response question) ----
+function renderConjoint(body){
+  const maCols = columns.filter(c=>dict[c].type==='Multi-response');
+  body.innerHTML = `<div class="card">
+    <p class="small-note">Pick a question where respondents named factors in ranked order. Importance is computed via Borda-count: 1st-ranked factors score highest.</p>
+    <div class="field-row">
+      <div><label class="field-label">Ranked-factor question</label><select id="cj-col">${maCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+      <button class="btn secondary small" onclick="computeCJ()">Run analysis</button>
+    </div>
+    <div id="cj-results"></div>
+  </div>`;
+  if(maCols.length===0){ document.getElementById('cj-results').innerHTML = `<p style="color:var(--warn);font-size:12.5px">No columns are marked "Multi-response" in the Question Dictionary.</p>`; }
+}
+function computeCJ(){
+  const col = document.getElementById('cj-col').value;
+  const scores = {};
+  rows.forEach(r=>{
+    const val = r[col]; if(!val) return;
+    const items = String(val).split(',').map(s=>s.trim()).filter(Boolean);
+    const K = items.length;
+    items.forEach((it,pos)=>{ scores[it] = (scores[it]||0) + (K-pos); });
+  });
+  const entries = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const total = entries.reduce((s,e)=>s+e[1],0);
+  const imp = entries.map(e=> Math.round(e[1]/total*1000)/10 );
+  document.getElementById('cj-results').innerHTML = `
+    <div class="two-col">
+      <div class="chart-box"><canvas id="chart-cj"></canvas></div>
+      <div id="cj-table-wrap"></div>
+    </div>
+    ${chartCustomControls('chart-cj','computeCJ')}
+    <div class="download-row">
+      <button class="btn secondary small" onclick="exportPNG('chart-cj','conjoint_importance')">Download PNG</button>
+      <button class="btn secondary small" onclick="exportModuleExcel('cj')">Download Excel (editable chart)</button>
+    </div>
+    ${pinFormControls('cj')}`;
+  renderChart('chart-cj','pie', entries.map(e=>e[0]), imp, {});
+  document.getElementById('cj-table-wrap').innerHTML = tableHtml(['Factor','Borda score','Relative importance'], entries.map((e,i)=>[e[0], e[1], imp[i]+'%']));
+  window._pinBuffer = window._pinBuffer||{};
+  window._pinBuffer['cj'] = {canvasId:'chart-cj', title:'Conjoint (stated-rank) — Attribute Importance', headers:['Factor','Borda score','Relative importance'], rowsArr: entries.map((e,i)=>[e[0],e[1],imp[i]])};
+  window._chartBuffer = window._chartBuffer||{};
+  window._chartBuffer['cj'] = {title:'Conjoint — Attribute Importance', headers:['Factor','Relative importance %'], rows: entries.map((e,i)=>[e[0], imp[i]]), type:'pie', filename:'conjoint_importance'};
+}
+
+// ---- Kano ----
+let kanoFeatures = [];
+const KANO_MAP = {
+  "Like|Must-be":"A","Like|Live with":"A","Like|Neutral":"A","Like|Dislike":"O",
+  "Must-be|Must-be":"I","Must-be|Live with":"I","Must-be|Neutral":"I","Must-be|Dislike":"M",
+  "Neutral|Must-be":"R","Neutral|Live with":"I","Neutral|Neutral":"I","Neutral|Dislike":"M",
+  "Live with|Must-be":"R","Live with|Live with":"I","Live with|Neutral":"I","Live with|Dislike":"M",
+  "Dislike|Must-be":"R","Dislike|Live with":"R","Dislike|Neutral":"R","Dislike|Dislike":"Q"
+};
+const KANO_CATS = ["Like","Must-be","Neutral","Live with","Dislike"];
+let kanoMapping = {};
+function renderKano(body){
+  const catCols = columns.filter(c=>dict[c].type==='Categorical');
+  if(kanoFeatures.length===0) kanoFeatures = [{name:'', func:catCols[0]||'', dys:catCols[0]||''}];
+  body.innerHTML = `<div class="card">
+    <p class="small-note">Add each feature with its functional question ("how do you feel if this IS present") and dysfunctional question ("how do you feel if this is NOT present"). Then map the actual response text to the 5 standard Kano reactions once below.</p>
+    <div id="kano-feature-rows"></div>
+    <button class="btn secondary small" onclick="kanoAddFeature()">+ Add feature</button>
+    <div id="kano-mapping" style="margin-top:16px"></div>
+    <div style="margin-top:14px"><button class="btn small" onclick="computeKano()">Run analysis</button></div>
+    <div id="kano-results"></div>
+  </div>`;
+  renderKanoFeatureRows();
+  renderKanoMapping();
+}
+function renderKanoFeatureRows(){
+  const catCols = columns.filter(c=>dict[c].type==='Categorical');
+  document.getElementById('kano-feature-rows').innerHTML = kanoFeatures.map((f,i)=>`
+    <div class="field-row" style="border-bottom:1px solid #1e252c;padding-bottom:10px">
+      <div><label class="field-label">Feature name</label><input type="text" value="${f.name}" placeholder="e.g. Wireless charging" onchange="kanoFeatures[${i}].name=this.value"></div>
+      <div><label class="field-label">Functional question</label><select onchange="kanoFeatures[${i}].func=this.value; renderKanoMapping();">${catCols.map(c=>`<option value="${c}" ${c===f.func?'selected':''}>${dict[c].short}</option>`).join('')}</select></div>
+      <div><label class="field-label">Dysfunctional question</label><select onchange="kanoFeatures[${i}].dys=this.value; renderKanoMapping();">${catCols.map(c=>`<option value="${c}" ${c===f.dys?'selected':''}>${dict[c].short}</option>`).join('')}</select></div>
+      <button class="btn secondary small" onclick="kanoFeatures.splice(${i},1); renderKanoFeatureRows(); renderKanoMapping();">Remove</button>
+    </div>`).join('');
+}
+function kanoAddFeature(){ const catCols = columns.filter(c=>dict[c].type==='Categorical'); kanoFeatures.push({name:'', func:catCols[0]||'', dys:catCols[0]||''}); renderKanoFeatureRows(); renderKanoMapping(); }
+function renderKanoMapping(){
+  const cols = [...new Set(kanoFeatures.flatMap(f=>[f.func,f.dys]).filter(Boolean))];
+  const values = [...new Set(cols.flatMap(c=> rows.map(r=>r[c])).filter(v=>v!==""))];
+  const wrap = document.getElementById('kano-mapping');
+  if(!wrap) return;
+  if(values.length===0){ wrap.innerHTML=''; return; }
+  wrap.innerHTML = `<label class="field-label">Map each response option to a standard Kano reaction</label>` +
+    values.map(v=>{
+      if(!(v in kanoMapping)) kanoMapping[v] = 'Neutral';
+      return `<div class="kano-map-row"><span>${v}</span>
+        <select onchange="kanoMapping['${v.replace(/'/g,"\\'")}']=this.value">
+          ${KANO_CATS.map(k=>`<option ${kanoMapping[v]===k?'selected':''}>${k}</option>`).join('')}
+        </select></div>`;
+    }).join('');
+}
+function computeKano(){
+  const valid = kanoFeatures.filter(f=>f.name && f.func && f.dys);
+  const out = document.getElementById('kano-results');
+  if(valid.length===0){ out.innerHTML = `<p style="color:var(--danger);font-size:12.5px">Add at least one named feature with both a functional and dysfunctional question.</p>`; return; }
+  const labelMap = {A:'Attractive',O:'Performance',M:'Must-be',I:'Indifferent',R:'Reverse',Q:'Questionable'};
+  const results = valid.map(f=>{
+    let tally = {A:0,O:0,M:0,I:0,R:0,Q:0}; let n=0;
+    rows.forEach(r=>{
+      const fv = r[f.func], dv = r[f.dys];
+      if(fv==="" || dv==="") return;
+      const fCat = kanoMapping[fv], dCat = kanoMapping[dv];
+      if(!fCat || !dCat) return;
+      const kanoResult = KANO_MAP[fCat+"|"+dCat] || 'I';
+      tally[kanoResult]++; n++;
+    });
+    const dominant = Object.entries(tally).filter(([k])=>k!=='Q').sort((a,b)=>b[1]-a[1])[0][0];
+    const CS = n? Math.round((tally.A+tally.O)/(tally.A+tally.O+tally.M+tally.I)*100)/100 : 0;
+    const DS = n? -Math.round((tally.O+tally.M)/(tally.A+tally.O+tally.M+tally.I)*100)/100 : 0;
+    return {name:f.name, tally, dominant, CS, DS, n};
+  });
+  out.innerHTML = `<div id="kano-table-wrap"></div>
+    <p class="small-note" style="margin-top:10px">No chart is generated for Kano — the output is a classification table, so the Excel download is data only.</p>
+    <div class="download-row"><button class="btn secondary small" onclick="exportExcel(window._pinBuffer.kano.headers, window._pinBuffer.kano.rowsArr,'kano')">Download Excel</button></div>
+    ${pinFormControls('kano')}`;
+  document.getElementById('kano-table-wrap').innerHTML = tableHtml(
+    ['Feature','Classification','Satisfaction coef.','Dissatisfaction coef.','Base (n)'],
+    results.map(r=>[r.name, labelMap[r.dominant], '+'+r.CS, r.DS, r.n])
+  );
+  window._pinBuffer = window._pinBuffer||{};
+  window._pinBuffer['kano'] = {canvasId:null, title:'Kano — Feature Classification', headers:['Feature','Classification','Satisfaction coef.','Dissatisfaction coef.','Base (n)'], rowsArr: results.map(r=>[r.name, labelMap[r.dominant], r.CS, r.DS, r.n])};
+}
+
+/* ============================= DASHBOARD ============================= */
+function renderDashboard(){
+  const wrap = document.getElementById('dash-sections');
+  const all = allDashboardSections();
+  if(all.length===0){ wrap.innerHTML = emptyState('Upload a dataset first, then add sections from the Question Dictionary tab.'); return; }
+  let html='';
+  all.forEach(s=>{
+    const tiles = dashboard[s.id] || [];
+    html += `<div class="dash-section">
+      <div class="dash-section-h"><h3>${s.name}</h3></div>
+      ${tiles.length? `<div class="dash-tiles">`+tiles.map(t=>`
+        <div class="tile"><div class="tile-h"><div class="t">${t.title}</div><div class="rm" onclick="removeTile('${s.id}','${t.id}')">×</div></div>${t.html}</div>
+      `).join('')+`</div>` : `<div class="empty-dash">Nothing pinned here yet.</div>`}
+    </div>`;
+  });
+  wrap.innerHTML = html;
+  saveState();
+}
+function removeTile(section,id){
+  dashboard[section] = (dashboard[section]||[]).filter(t=>String(t.id)!==String(id));
+  renderDashboard(); renderInsightsSrc();
+}
+
+/* ============================= INSIGHTS ============================= */
+function renderInsightsSrc(){
+  let all=[];
+  allDashboardSections().forEach(s=> (dashboard[s.id]||[]).forEach(t=>all.push({...t, sectionName:s.name})));
+  document.getElementById('pinned-count').textContent = all.length+' tiles pinned';
+  document.getElementById('insight-src-list').innerHTML = all.length
+    ? all.map(t=>`<div>• <b>${t.sectionName}</b> → ${t.title}</div>`).join('')
+    : '<div style="color:var(--text-2)">No tiles pinned yet — pin at least one chart or table from the Analysis Workbench.</div>';
+  document.getElementById('gen-btn').disabled = all.length===0;
+}
+const INSIGHTS_SYSTEM_PROMPT = `You are the Insights Agent inside XSurvey Analyser.
+Your job is to read the charts and tables that the analyst has assembled on a given Dashboard,
+and produce a single-page executive insights report.
+
+AUDIENCE: CEO, CFO, and C-suite executives. Time-constrained, commercially minded, want "what does this mean for the business."
+
+OUTPUT FORMAT (strict, one page, plain text with simple markdown headers):
+1. HEADLINE TAKEAWAY — one to two sentences.
+2. KEY INSIGHTS (3–5 bullets) — finding, number(s), business implication, in that order. Cite the source section/chart in parentheses.
+3. PRICING & MARGIN IMPLICATION — include if a Pricing Perception tile exists; otherwise note it's not available.
+4. RISKS / WATCH-OUTS — 1–3 bullets on small base sizes or contradictions between sections.
+5. RECOMMENDED NEXT ACTION(S) — 1–3 concrete, specific actions.
+
+RULES: only use numbers present in the supplied tiles; never invent a figure. Omit empty sections rather than fabricate. Plain business English, no stats jargon.`;
+async function generateInsights(){
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  const card = document.getElementById('insight-card'); card.classList.remove('hidden');
+  const out = document.getElementById('insight-out');
+  out.innerHTML = '<span style="color:var(--text-2)">Reading pinned dashboard tiles<span class="loading-dots"></span></span>';
+  let dashboardText = '';
+  allDashboardSections().forEach(s=>{
+    const tiles = dashboard[s.id]||[];
+    if(tiles.length){
+      dashboardText += `\\n\\n## ${s.name}\\n`;
+      tiles.forEach(t=>{
+        const plain = t.html.replace(/<[^>]+>/g,' ').replace(/\\s+/g,' ').trim();
+        dashboardText += `- ${t.title}: ${plain}\\n`;
+      });
+    }
+  });
+  try{
+    const response = await fetch("/api/generate-insights", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ system: INSIGHTS_SYSTEM_PROMPT,
+        message: "Dashboard content, grouped by section:\\n"+dashboardText+"\\n\\nWrite the executive insights report now." })
+    });
+    const data = await response.json();
+    if(!response.ok){ out.innerHTML = '<span style="color:var(--danger)">'+(data.error||'Could not generate report.')+'</span>'; btn.disabled=false; btn.textContent='Regenerate Report'; return; }
+    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\\n');
+    out.textContent = text || 'No response returned.';
+  }catch(err){ out.innerHTML = '<span style="color:var(--danger)">Could not generate report: '+err.message+'</span>'; }
+  btn.disabled = false; btn.textContent = 'Regenerate Report';
+}
+
+/* ============================= NAV / ROLE ============================= */
+const TAB_TITLES = {upload:'Upload & Preview', clean:'Missing Values & ETL', dict:'Question Dictionary', analysis:'Analysis Workbench', dashboard:'Dashboard Builder', insights:'Generate Insights Report'};
+function showTab(tab){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));
+  document.getElementById('tab-'+tab).classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.tab===tab));
+  document.getElementById('crumb-tab').textContent = TAB_TITLES[tab];
+}
+document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click', ()=>showTab(n.dataset.tab)));
+document.querySelectorAll('.module-card').forEach(n=>n.addEventListener('click', ()=>renderModule(n.dataset.mod)));
+document.querySelectorAll('.role-btn').forEach(b=>b.addEventListener('click', function(){
+  document.querySelectorAll('.role-btn').forEach(x=>x.classList.remove('active'));
+  this.classList.add('active');
+  role = this.dataset.role;
+  document.querySelectorAll('[data-role-group="analyst"]').forEach(el=> el.style.display = role==='analyst' ? '' : 'none');
+  const fb = document.getElementById('analyst-only-filterbar'); if(fb) fb.style.display = role==='analyst' ? '' : 'none';
+  const as = document.getElementById('analyst-only-addsection'); if(as) as.style.display = role==='analyst' ? '' : 'none';
+  document.getElementById('dash-sub').textContent = role==='exec'
+    ? 'View-only. Executive Viewer sees Dashboard and Insights Report only — no Data or Analysis tabs, no edit access.'
+    : "A canvas you build deliberately — nothing here is auto-populated. Pin a chart or a table from the Analysis Workbench into any section below, or add your own custom section.";
+  showTab(role==='exec' ? 'dashboard' : 'upload');
+}));
+
+/* ============================= INIT ============================= */
+function renderAll(){
+  renderPreview(); renderClean(); renderSectionChips(); renderDictionary();
+  renderModule(currentMod); renderDashboard(); renderInsightsSrc();
+  saveState();
+}
+
+/* ============================= INIT: restore saved dataset, if any ============================= */
+const restored = loadState();
+if(!restored) seedDefaultSections();
+renderAll();
+if(restored && columns.length){
+  document.getElementById('ds-name').textContent = fileName || 'Restored dataset';
+  document.getElementById('ds-pill').classList.add('has-data');
+  document.getElementById('topbar-remove-btn').style.display = '';
+  document.getElementById('remove-data-card').style.display = '';
+  document.getElementById('upload-status').textContent = 'Restored '+rows.length+' rows × '+columns.length+' columns saved in this browser.';
+}
+showTab('upload');
+</script>
+</body>
+</html>
