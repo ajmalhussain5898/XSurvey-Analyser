@@ -10,6 +10,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{
   --bg-0:#0A0D10; --bg-1:#12161B; --bg-2:#1A2027; --bg-3:#222A32;
@@ -117,6 +119,21 @@ tr:hover td{background:var(--bg-2);}
 .small-note{font-size:11.5px;color:var(--text-2);line-height:1.5;margin:0 0 12px;}
 .kano-map-row{display:grid;grid-template-columns:2fr 1fr;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid #1e252c;}
 .download-row{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.key-insight{display:flex;gap:10px;align-items:flex-start;background:var(--bg-2);border:1px solid rgba(198,255,61,.35);border-radius:12px;padding:10px 34px 10px 12px;margin-bottom:10px;position:relative;}
+.key-insight .bulb{width:26px;height:26px;border-radius:8px;background:rgba(198,255,61,.15);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
+.key-insight .ki-body{flex:1;min-width:0;}
+.key-insight .ki-toolbar{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;}
+.key-insight .ki-toolbar button{background:var(--bg-3);border:1px solid var(--border);color:var(--text-1);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;}
+.key-insight .ki-toolbar button:hover{border-color:var(--accent);color:var(--accent);}
+.key-insight .ki-toolbar select{padding:3px 6px;font-size:11px;}
+.key-insight .ki-text{min-height:34px;outline:none;font-size:12.5px;line-height:1.5;color:var(--text-0);}
+.key-insight .ki-text:empty:before{content:'Add a key insight (up to 50 words)…';color:var(--text-2);}
+.key-insight .ki-count{font-size:10px;color:var(--text-2);margin-top:4px;text-align:right;}
+.key-insight .ki-remove{position:absolute;top:8px;right:10px;background:transparent;border:none;color:var(--text-2);cursor:pointer;font-size:15px;line-height:1;}
+.key-insight .ki-remove:hover{color:var(--danger);}
+.add-ki-btn{background:transparent;border:1px dashed var(--border);color:var(--text-2);border-radius:8px;padding:6px 12px;font-size:11.5px;cursor:pointer;margin-bottom:10px;}
+.add-ki-btn:hover{color:var(--accent);border-color:var(--accent);}
+.history-card{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 </style>
 </head>
 <body>
@@ -139,6 +156,7 @@ tr:hover td{background:var(--bg-2);}
     <div class="nav-group">
       <div class="nav-group-label">Dashboard</div>
       <div class="nav-item" data-tab="dashboard"><span class="dot"></span>Dashboard Builder</div>
+      <div class="nav-item" data-tab="history"><span class="dot"></span>Dashboard History</div>
     </div>
     <div class="nav-group">
       <div class="nav-group-label">Insights</div>
@@ -232,7 +250,7 @@ tr:hover td{background:var(--bg-2);}
       <!-- ===================== DASHBOARD ===================== -->
       <section id="tab-dashboard" class="tab-panel hidden">
         <h2 class="panel-title">Dashboard Builder</h2>
-        <p class="panel-sub" id="dash-sub">A canvas you build deliberately — nothing here is auto-populated. Pin a chart or a table from the Analysis Workbench into any section below, or add your own custom section.</p>
+        <p class="panel-sub" id="dash-sub">A canvas you build deliberately — nothing here is auto-populated. Pin a chart or a table from the Analysis Workbench into any section below, or add your own custom section. Every section also gets an optional "Key Insight" callout above and below it.</p>
 
         <div class="filter-bar" id="analyst-only-filterbar">
           <span class="fb-label">Global filters</span>
@@ -248,13 +266,31 @@ tr:hover td{background:var(--bg-2);}
           </div>
         </div>
 
+        <div class="card">
+          <div class="card-h"><h3>Export &amp; share</h3><span class="hint">Snapshot this Dashboard as-is</span></div>
+          <div class="download-row" style="margin-top:0">
+            <button class="btn secondary small" onclick="exportDashboardPDF('dash-sections','xsurvey_dashboard')">Download Dashboard as PDF</button>
+            <button class="btn secondary small" onclick="downloadLatex()">Download LaTeX (.tex)</button>
+            <button class="btn secondary small" onclick="snapshotDashboard('Manual save'); renderHistory(); alert('Saved to Dashboard History.');">Save snapshot to History</button>
+          </div>
+          <p class="small-note" style="margin-top:10px;margin-bottom:0">PDF renders exactly what's on screen. The .tex file is real LaTeX source (sections, key insights, and tile tables) — compile it with Overleaf or a local TeX distribution for a print-quality PDF; it isn't compiled in-browser.</p>
+        </div>
+
         <div id="dash-sections"></div>
+      </section>
+
+      <!-- ===================== DASHBOARD HISTORY ===================== -->
+      <section id="tab-history" class="tab-panel hidden">
+        <h2 class="panel-title">Dashboard History</h2>
+        <p class="panel-sub">Snapshots of past Dashboards — taken automatically when you remove or replace a dataset, or saved manually from the Dashboard Builder. These stay available for viewing and sharing even after the underlying data is gone.</p>
+        <div id="history-list"></div>
+        <div id="history-viewer"></div>
       </section>
 
       <!-- ===================== INSIGHTS ===================== -->
       <section id="tab-insights" class="tab-panel hidden">
         <h2 class="panel-title">Insights Report</h2>
-        <p class="panel-sub">Reads every tile currently pinned to the Dashboard and drafts a one-page executive brief. Nothing not on the Dashboard gets summarized.</p>
+        <p class="panel-sub">Reads every tile currently pinned to the Dashboard and drafts a one-page executive brief. Nothing not on the Dashboard gets summarized. Powered by Gemini.</p>
         <div class="card">
           <div class="card-h"><h3>Dashboard snapshot</h3><span class="hint" id="pinned-count">0 tiles pinned</span></div>
           <div id="insight-src-list" style="font-size:12px;color:var(--text-1);line-height:1.8"></div>
@@ -281,10 +317,13 @@ let dict = {};
 let sections = [];
 let dashboardOnlySections = [];
 let dashboard = {};
+let keyInsights = {};  // sectionId -> {top:[{id,html}], bottom:[{id,html}]}
+let dashboardHistory = [];
 let chartRegistry = {};
 let chartStyle = {};   // canvasId -> {color, grid, xLabels, yLabels, fontSize}
 let fileName = '';
 const STORAGE_KEY = 'xsurvey_analyser_state_v1';
+const HISTORY_KEY = 'xsurvey_analyser_history_v1';
 let currentMod = 'freq';
 let role = 'analyst';
 let uid = 0; const newId = ()=> 'sec_'+(++uid)+'_'+Math.random().toString(36).slice(2,7);
@@ -300,12 +339,13 @@ function seedDefaultSections(){
   ];
 }
 function allDashboardSections(){ return [...sections, ...dashboardOnlySections]; }
+function ensureKI(sectionId){ if(!keyInsights[sectionId]) keyInsights[sectionId] = {top:[], bottom:[]}; return keyInsights[sectionId]; }
 
 /* ============================= PERSISTENCE (survives refresh) ============================= */
 function saveState(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      rows, columns, dict, sections, dashboardOnlySections, dashboard, fileName, uid
+      rows, columns, dict, sections, dashboardOnlySections, dashboard, keyInsights, fileName, uid
     }));
   }catch(e){ console.warn('Could not save XSurvey Analyser state to this browser:', e.message); }
 }
@@ -317,22 +357,55 @@ function loadState(){
     if(!s.columns || s.columns.length===0) return false;
     rows = s.rows||[]; columns = s.columns||[]; dict = s.dict||{};
     sections = s.sections||[]; dashboardOnlySections = s.dashboardOnlySections||[];
-    dashboard = s.dashboard||{}; fileName = s.fileName||''; uid = s.uid||0;
+    dashboard = s.dashboard||{}; keyInsights = s.keyInsights||{}; fileName = s.fileName||''; uid = s.uid||0;
     return true;
   }catch(e){ console.warn('Could not restore saved state:', e.message); return false; }
 }
+
+/* ---- Dashboard History: separate storage key so it survives "Remove data" ---- */
+function loadHistory(){
+  try{ const raw = localStorage.getItem(HISTORY_KEY); dashboardHistory = raw ? JSON.parse(raw) : []; }
+  catch(e){ dashboardHistory = []; }
+}
+function saveHistory(){
+  try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(dashboardHistory)); }
+  catch(e){ console.warn('Could not save Dashboard History (it may be too large for this browser):', e.message); }
+}
+function hasDashboardContent(){
+  return allDashboardSections().some(s =>
+    (dashboard[s.id] && dashboard[s.id].length) ||
+    (keyInsights[s.id] && (keyInsights[s.id].top.length || keyInsights[s.id].bottom.length))
+  );
+}
+function snapshotDashboard(reason){
+  if(!hasDashboardContent()) return false;
+  const snap = {
+    id: Date.now()+Math.random(),
+    savedAt: new Date().toISOString(),
+    reason: reason || 'Manual save',
+    datasetName: fileName || 'Untitled dataset',
+    sections: allDashboardSections().map(s=>({id:s.id, name:s.name})),
+    dashboard: JSON.parse(JSON.stringify(dashboard)),
+    keyInsights: JSON.parse(JSON.stringify(keyInsights))
+  };
+  dashboardHistory.unshift(snap);
+  if(dashboardHistory.length>20) dashboardHistory = dashboardHistory.slice(0,20);
+  saveHistory();
+  return true;
+}
 function removeData(){
-  if(!confirm('Remove the uploaded dataset and everything built from it — Dictionary, Analysis, Dashboard, Insights? This cannot be undone.')) return;
+  if(!confirm('Remove the uploaded dataset and everything built from it — Dictionary, Analysis, Dashboard, Insights? This cannot be undone. (If your Dashboard has anything pinned, a snapshot is saved to Dashboard History first, so you can still view or share it.)')) return;
+  snapshotDashboard('Removed dataset');
   try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
   rows=[]; columns=[]; dict={}; dashboardOnlySections=[]; fileName='';
   ggRows=[]; kanoFeatures=[]; kanoMapping={};
   seedDefaultSections();
-  dashboard={}; allDashboardSections().forEach(s=>dashboard[s.id]=[]);
+  dashboard={}; keyInsights={}; allDashboardSections().forEach(s=>{ dashboard[s.id]=[]; keyInsights[s.id]={top:[],bottom:[]}; });
   document.getElementById('ds-name').textContent = 'No dataset loaded';
   document.getElementById('ds-pill').classList.remove('has-data');
   document.getElementById('topbar-remove-btn').style.display = 'none';
   document.getElementById('remove-data-card').style.display = 'none';
-  document.getElementById('upload-status').textContent = 'Dataset removed from this browser.';
+  document.getElementById('upload-status').textContent = 'Dataset removed from this browser. Check Dashboard History if you had anything pinned.';
   const fi = document.getElementById('file-input'); if(fi) fi.value = '';
   renderAll();
   showTab('upload');
@@ -345,25 +418,45 @@ document.getElementById('file-input').addEventListener('change', function(e){
   document.getElementById('upload-status').textContent = "Parsing "+f.name+"…";
   const reader = new FileReader();
   reader.onload = function(evt){
+    let parsedColumns, parsedRows;
     try{
       const wb = XLSX.read(evt.target.result, {type:'binary'});
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws, {defval:""});
       if(json.length===0){ document.getElementById('upload-status').textContent="No rows found."; return; }
-      columns = Object.keys(json[0]);
-      rows = json;
-      seedDefaultSections();
-      buildDictionary();
-      dashboard = {}; allDashboardSections().forEach(s=>dashboard[s.id]=[]);
-      fileName = f.name;
-      document.getElementById('ds-name').textContent = fileName;
-      document.getElementById('ds-pill').classList.add('has-data');
-      document.getElementById('topbar-remove-btn').style.display = '';
-      document.getElementById('remove-data-card').style.display = '';
-      document.getElementById('upload-status').textContent = "Loaded "+rows.length+" rows × "+columns.length+" columns. Saved in this browser — it'll still be here after a refresh.";
-      renderAll();
+      parsedColumns = Object.keys(json[0]);
+      parsedRows = json;
     }catch(err){
       document.getElementById('upload-status').textContent = "Could not parse file: "+err.message;
+      return;
+    }
+
+    // if a dashboard was already built, snapshot it to History before it gets replaced
+    try{ if(typeof snapshotDashboard==='function' && typeof hasDashboardContent==='function' && hasDashboardContent()) snapshotDashboard('Replaced with a new upload'); }catch(e){ console.warn('Could not snapshot previous dashboard:', e.message); }
+
+    columns = parsedColumns;
+    rows = parsedRows;
+    seedDefaultSections();
+    buildDictionary();
+    dashboard = {}; allDashboardSections().forEach(s=>dashboard[s.id]=[]);
+    keyInsights = {}; allDashboardSections().forEach(s=>{ keyInsights[s.id] = {top:[], bottom:[]}; });
+    fileName = f.name;
+
+    // persist immediately — the upload must survive a refresh even if a
+    // display step below throws on some unusual column/value in this file
+    saveState();
+
+    document.getElementById('ds-name').textContent = fileName;
+    document.getElementById('ds-pill').classList.add('has-data');
+    document.getElementById('topbar-remove-btn').style.display = '';
+    document.getElementById('remove-data-card').style.display = '';
+    document.getElementById('upload-status').textContent = "Loaded "+rows.length+" rows × "+columns.length+" columns. Saved in this browser — it'll still be here after a refresh.";
+
+    try{
+      renderAll();
+    }catch(err){
+      console.error('Render error after upload:', err);
+      document.getElementById('upload-status').textContent = "Loaded and saved (your data is safe and will survive a refresh), but the display hit an error: "+err.message+". Try clicking another tab and back — if it persists, use the thumbs-down/feedback option so this can be fixed.";
     }
   };
   reader.readAsBinaryString(f);
@@ -401,7 +494,7 @@ function updateShortLabel(col, val){
 function renderSectionChips(){
   document.getElementById('section-chips').innerHTML = sections.map(s=>`
     <span class="section-chip">
-      <input class="qd-input mono" style="width:auto;min-width:60px" value="${s.name}" onchange="renameSection('${s.id}',this.value)">
+      <input class="qd-input mono" style="width:auto;min-width:60px" value="${ha(s.name)}" onchange="renameSection('${s.id}',this.value)">
       <button onclick="removeSection('${s.id}')" title="Remove section">×</button>
     </span>`).join('');
 }
@@ -431,12 +524,12 @@ function renderDictionary(){
   let head = '<tr><th style="width:32%">Full verbatim text</th><th style="width:20%">Short label</th><th>Type</th><th>Section</th></tr>';
   let body = columns.map(c=>`<tr title="${c.replace(/"/g,'&quot;')}">
       <td style="white-space:normal;max-width:340px;color:var(--text-2);font-size:11.5px">${c}</td>
-      <td><input class="qd-input mono" value="${dict[c].short}" onchange="updateShortLabel('${c.replace(/'/g,"\\'")}', this.value)"></td>
-      <td><select onchange="dict['${c.replace(/'/g,"\\'")}'].type=this.value; renderAll();">
+      <td><input class="qd-input mono" value="${ha(dict[c].short)}" onchange="updateShortLabel('${qi(c)}', this.value)"></td>
+      <td><select onchange="dict['${qi(c)}'].type=this.value; renderAll();">
         ${['Categorical','Numeric','Multi-response'].map(t=>`<option ${dict[c].type===t?'selected':''}>${t}</option>`).join('')}
       </select></td>
-      <td><select onchange="dict['${c.replace(/'/g,"\\'")}'].section=this.value; saveState();">
-        ${sections.map(s=>`<option value="${s.id}" ${dict[c].section===s.id?'selected':''}>${s.name}</option>`).join('')}
+      <td><select onchange="dict['${qi(c)}'].section=this.value; saveState();">
+        ${sections.map(s=>`<option value="${s.id}" ${dict[c].section===s.id?'selected':''}>${he(s.name)}</option>`).join('')}
       </select></td></tr>`).join('');
   t.innerHTML = head+body;
 }
@@ -449,7 +542,7 @@ function renderPreview(){
   if(columns.length===0){ wrap.innerHTML = emptyState('No file uploaded yet.'); document.getElementById('preview-hint').textContent=''; return; }
   const t = document.createElement('table'); t.id='preview-table';
   let head = '<tr>'+columns.map(c=>`<th>${dict[c].short}<div style="font-weight:400;text-transform:none;color:var(--text-2);font-size:10px;margin-top:2px">${dict[c].type} · ${pctMissing(c)}% missing</div></th>`).join('')+'</tr>';
-  let body = rows.slice(0,10).map(r=>'<tr>'+columns.map(c=>`<td>${String(r[c]).slice(0,40)}</td>`).join('')+'</tr>').join('');
+  let body = rows.slice(0,10).map(r=>'<tr>'+columns.map(c=>`<td>${he(String(r[c]).slice(0,40))}</td>`).join('')+'</tr>').join('');
   t.innerHTML = head+body;
   wrap.innerHTML=''; wrap.appendChild(t);
   document.getElementById('preview-hint').textContent = 'Showing first 10 of '+rows.length+' rows';
@@ -461,7 +554,7 @@ function renderClean(){
   let rowsHtml = columns.map(c=>{
     const m = pctMissing(c);
     return `<tr><td style="white-space:normal;max-width:260px">${c}</td>
-      <td><input class="qd-input mono" value="${dict[c].short}" onchange="updateShortLabel('${c.replace(/'/g,"\\'")}', this.value)"></td>
+      <td><input class="qd-input mono" value="${ha(dict[c].short)}" onchange="updateShortLabel('${qi(c)}', this.value)"></td>
       <td>${dict[c].type}</td>
       <td><span class="miss-bar"><i style="width:${m}%"></i></span>${m}%</td>
       <td><select style="font-size:11px;padding:4px 6px"><option>Leave as-is</option><option>Exclude variable</option><option>Impute</option><option>"Prefer not to answer"</option></select></td></tr>`;
@@ -486,8 +579,8 @@ function maFreqOf(col){
   return Object.entries(counts).sort((a,b)=>b[1]-a[1]);
 }
 function tableHtml(headers, rowsArr){
-  return '<div class="grid-wrap"><table><tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr>'+
-    rowsArr.map(r=>'<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('')+'</table></div>';
+  return '<div class="grid-wrap"><table><tr>'+headers.map(h=>`<th>${he(h)}</th>`).join('')+'</tr>'+
+    rowsArr.map(r=>'<tr>'+r.map(c=>`<td>${he(c)}</td>`).join('')+'</tr>').join('')+'</table></div>';
 }
 
 /* ---- chart style state ---- */
@@ -556,7 +649,7 @@ function chartTypeSelector(id, opts){
 function pinFormControls(prefix){
   return `<div class="field-row" style="margin-top:14px;margin-bottom:0;align-items:center">
     <div><label class="field-label">Pin as</label><select id="${prefix}-form"><option value="chart">Chart</option><option value="table">Table</option></select></div>
-    <div><label class="field-label">Dashboard section</label><select id="${prefix}-section">${allDashboardSections().map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+    <div><label class="field-label">Dashboard section</label><select id="${prefix}-section">${allDashboardSections().map(s=>`<option value="${s.id}">${he(s.name)}</option>`).join('')}</select></div>
     <button class="btn small" onclick="pinCurrent('${prefix}')">Pin to Dashboard</button>
   </div>`;
 }
@@ -593,6 +686,10 @@ function exportExcel(headers, rowsArr, filename){ // plain, data-only (used for 
    chartHeaders[0] = category column; remaining columns = numeric series.
 ============================================================================ */
 function xEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;'); }
+function ha(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function qi(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/\n/g,' ').replace(/\r/g,''); }
+function he(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 function colLetter(n){ let s=''; while(n>0){ const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; }
 
 function buildSheetXml(headers, rowsArr){
@@ -762,7 +859,7 @@ function renderModule(mod){
     const catCols = columns.filter(c=>dict[c].type!=='Numeric');
     body.innerHTML = `<div class="card">
       <div class="field-row">
-        <div><label class="field-label">Question</label><select id="freq-col">${catCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+        <div><label class="field-label">Question</label><select id="freq-col">${catCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
         <div><label class="field-label">Display</label><select id="freq-view"><option value="pct">%</option><option value="n">Count (n)</option></select></div>
         <div><label class="field-label">Chart type</label>${chartTypeSelector('freq-type',{onchange:'drawFreq()'})}</div>
         <button class="btn secondary small" onclick="drawFreq()">Update</button>
@@ -786,8 +883,8 @@ function renderModule(mod){
     const catCols = columns.filter(c=>dict[c].type!=='Numeric');
     body.innerHTML = `<div class="card">
       <div class="field-row">
-        <div><label class="field-label">Row question</label><select id="cross-row">${catCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
-        <div><label class="field-label">Banner (columns)</label><select id="cross-col">${catCols.map((c,i)=>`<option value="${c}" ${i===1?'selected':''}>${dict[c].short}</option>`).join('')}</select></div>
+        <div><label class="field-label">Row question</label><select id="cross-row">${catCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
+        <div><label class="field-label">Banner (columns)</label><select id="cross-col">${catCols.map((c,i)=>`<option value="${ha(c)}" ${i===1?'selected':''}>${ha(dict[c].short)}</option>`).join('')}</select></div>
         <div><label class="field-label">Chart type</label>${chartTypeSelector('cross-type',{onchange:'drawCross()',stacked:true})}</div>
         <button class="btn secondary small" onclick="drawCross()">Update</button>
       </div>
@@ -810,7 +907,7 @@ function renderModule(mod){
     if(maCols.length===0){ body.innerHTML = emptyState('No columns are marked "Multi-response" in the Question Dictionary yet. Set a column type there first.'); return; }
     body.innerHTML = `<div class="card">
       <div class="field-row">
-        <div><label class="field-label">Multi-response question</label><select id="multi-col">${maCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+        <div><label class="field-label">Multi-response question</label><select id="multi-col">${maCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
         <div><label class="field-label">Base</label><select id="multi-base"><option value="resp">% of respondents</option><option value="mention">% of mentions</option></select></div>
         <div><label class="field-label">Chart type</label>${chartTypeSelector('multi-type',{onchange:'drawMulti()'})}</div>
         <button class="btn secondary small" onclick="drawMulti()">Update</button>
@@ -835,7 +932,7 @@ function renderModule(mod){
     if(numCols.length===0){ body.innerHTML = emptyState('No columns are marked "Numeric" in the Question Dictionary yet.'); return; }
     body.innerHTML = `<div class="card">
       <div class="field-row">
-        <div><label class="field-label">Numeric variable</label><select id="desc-col">${numCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+        <div><label class="field-label">Numeric variable</label><select id="desc-col">${numCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
         <button class="btn secondary small" onclick="drawDesc()">Update</button>
       </div>
       <div class="stat-row" id="desc-stats"></div>
@@ -883,14 +980,14 @@ function drawCross(){
   const colVals = [...new Set(rows.map(r=>r[colCol]))].filter(v=>v!=="").slice(0,5);
   const colBase = {}; colVals.forEach(cv=>colBase[cv]=rows.filter(r=>r[colCol]===cv).length);
 
-  let head = '<tr><th>'+dict[rowCol].short+'</th>'+colVals.map(cv=>`<th>${cv} (n=${colBase[cv]})</th>`).join('')+'</tr>';
+  let head = '<tr><th>'+he(dict[rowCol].short)+'</th>'+colVals.map(cv=>`<th>${he(cv)} (n=${colBase[cv]})</th>`).join('')+'</tr>';
   let bodyRows = rowVals.map(rv=>{
     let cells = colVals.map(cv=>{
       const n = rows.filter(r=>r[rowCol]===rv && r[colCol]===cv).length;
       const pct = colBase[cv]? Math.round(n/colBase[cv]*1000)/10 : 0;
       return `<td>${pct}%</td>`;
     }).join('');
-    return `<tr><td>${rv}</td>${cells}</tr>`;
+    return `<tr><td>${he(rv)}</td>${cells}</tr>`;
   }).join('');
   document.getElementById('cross-table-wrap').innerHTML = '<table>'+head+bodyRows+'</table>';
 
@@ -960,10 +1057,10 @@ function renderVanWestendorp(body){
   body.innerHTML = `<div class="card">
     <p class="small-note">Pick four numeric price questions from your Question Dictionary. Mark those columns "Numeric" in the Dictionary if they aren't already.</p>
     <div class="field-row">
-      <div><label class="field-label">Too cheap</label><select id="vw-tc">${numCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
-      <div><label class="field-label">Cheap</label><select id="vw-c">${numCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
-      <div><label class="field-label">Expensive</label><select id="vw-e">${numCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
-      <div><label class="field-label">Too expensive</label><select id="vw-te">${numCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+      <div><label class="field-label">Too cheap</label><select id="vw-tc">${numCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
+      <div><label class="field-label">Cheap</label><select id="vw-c">${numCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
+      <div><label class="field-label">Expensive</label><select id="vw-e">${numCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
+      <div><label class="field-label">Too expensive</label><select id="vw-te">${numCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
       <button class="btn secondary small" onclick="computeVW()">Run analysis</button>
     </div>
     <div id="vw-results"></div>
@@ -1048,11 +1145,11 @@ function renderGGRows(){
   document.getElementById('gg-rows').innerHTML = ggRows.map((r,i)=>{
     const uniqueVals = [...new Set(rows.map(x=>x[r.col]))].filter(v=>v!=="");
     return `<div class="field-row" style="border-bottom:1px solid #1e252c;padding-bottom:10px">
-      <div><label class="field-label">Question</label><select onchange="ggRows[${i}].col=this.value; ggRows[${i}].accept=[]; renderGGRows();">${columns.map(c=>`<option value="${c}" ${c===r.col?'selected':''}>${dict[c].short}</option>`).join('')}</select></div>
+      <div><label class="field-label">Question</label><select onchange="ggRows[${i}].col=this.value; ggRows[${i}].accept=[]; renderGGRows();">${columns.map(c=>`<option value="${ha(c)}" ${c===r.col?'selected':''}>${ha(dict[c].short)}</option>`).join('')}</select></div>
       <div><label class="field-label">Price (PKR)</label><input type="number" value="${r.price}" style="width:110px" onchange="ggRows[${i}].price=this.value"></div>
       <div style="flex:1;min-width:220px"><label class="field-label">Counts as "would buy"</label>
         <select multiple size="3" style="width:100%" onchange="ggRows[${i}].accept=[...this.selectedOptions].map(o=>o.value)">
-          ${uniqueVals.map(v=>`<option value="${v}" ${r.accept.includes(v)?'selected':''}>${v}</option>`).join('')}
+          ${uniqueVals.map(v=>`<option value="${ha(v)}" ${r.accept.includes(v)?'selected':''}>${ha(v)}</option>`).join('')}
         </select>
       </div>
       <button class="btn secondary small" onclick="ggRows.splice(${i},1); renderGGRows();">Remove</button>
@@ -1098,8 +1195,8 @@ function renderMaxDiff(body){
   body.innerHTML = `<div class="card">
     <p class="small-note">Pick a "best" selections question. Optionally add a "worst"/dislike question to sharpen the score — preference share = normalized (Best% − Worst%).</p>
     <div class="field-row">
-      <div><label class="field-label">Best selections</label><select id="md-best">${maCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
-      <div><label class="field-label">Worst selections (optional)</label><select id="md-worst"><option value="">— none —</option>${maCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+      <div><label class="field-label">Best selections</label><select id="md-best">${maCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
+      <div><label class="field-label">Worst selections (optional)</label><select id="md-worst"><option value="">— none —</option>${maCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
       <button class="btn secondary small" onclick="computeMD()">Run analysis</button>
     </div>
     <div id="md-results"></div>
@@ -1147,7 +1244,7 @@ function renderConjoint(body){
   body.innerHTML = `<div class="card">
     <p class="small-note">Pick a question where respondents named factors in ranked order. Importance is computed via Borda-count: 1st-ranked factors score highest.</p>
     <div class="field-row">
-      <div><label class="field-label">Ranked-factor question</label><select id="cj-col">${maCols.map(c=>`<option value="${c}">${dict[c].short}</option>`).join('')}</select></div>
+      <div><label class="field-label">Ranked-factor question</label><select id="cj-col">${maCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
       <button class="btn secondary small" onclick="computeCJ()">Run analysis</button>
     </div>
     <div id="cj-results"></div>
@@ -1214,9 +1311,9 @@ function renderKanoFeatureRows(){
   const catCols = columns.filter(c=>dict[c].type==='Categorical');
   document.getElementById('kano-feature-rows').innerHTML = kanoFeatures.map((f,i)=>`
     <div class="field-row" style="border-bottom:1px solid #1e252c;padding-bottom:10px">
-      <div><label class="field-label">Feature name</label><input type="text" value="${f.name}" placeholder="e.g. Wireless charging" onchange="kanoFeatures[${i}].name=this.value"></div>
-      <div><label class="field-label">Functional question</label><select onchange="kanoFeatures[${i}].func=this.value; renderKanoMapping();">${catCols.map(c=>`<option value="${c}" ${c===f.func?'selected':''}>${dict[c].short}</option>`).join('')}</select></div>
-      <div><label class="field-label">Dysfunctional question</label><select onchange="kanoFeatures[${i}].dys=this.value; renderKanoMapping();">${catCols.map(c=>`<option value="${c}" ${c===f.dys?'selected':''}>${dict[c].short}</option>`).join('')}</select></div>
+      <div><label class="field-label">Feature name</label><input type="text" value="${ha(f.name)}" placeholder="e.g. Wireless charging" onchange="kanoFeatures[${i}].name=this.value"></div>
+      <div><label class="field-label">Functional question</label><select onchange="kanoFeatures[${i}].func=this.value; renderKanoMapping();">${catCols.map(c=>`<option value="${ha(c)}" ${c===f.func?'selected':''}>${ha(dict[c].short)}</option>`).join('')}</select></div>
+      <div><label class="field-label">Dysfunctional question</label><select onchange="kanoFeatures[${i}].dys=this.value; renderKanoMapping();">${catCols.map(c=>`<option value="${ha(c)}" ${c===f.dys?'selected':''}>${ha(dict[c].short)}</option>`).join('')}</select></div>
       <button class="btn secondary small" onclick="kanoFeatures.splice(${i},1); renderKanoFeatureRows(); renderKanoMapping();">Remove</button>
     </div>`).join('');
 }
@@ -1231,7 +1328,7 @@ function renderKanoMapping(){
     values.map(v=>{
       if(!(v in kanoMapping)) kanoMapping[v] = 'Neutral';
       return `<div class="kano-map-row"><span>${v}</span>
-        <select onchange="kanoMapping['${v.replace(/'/g,"\\'")}']=this.value">
+        <select onchange="kanoMapping['${qi(v)}']=this.value">
           ${KANO_CATS.map(k=>`<option ${kanoMapping[v]===k?'selected':''}>${k}</option>`).join('')}
         </select></div>`;
     }).join('');
@@ -1276,11 +1373,16 @@ function renderDashboard(){
   let html='';
   all.forEach(s=>{
     const tiles = dashboard[s.id] || [];
+    const ki = ensureKI(s.id);
     html += `<div class="dash-section">
-      <div class="dash-section-h"><h3>${s.name}</h3></div>
+      <div class="dash-section-h"><h3>${he(s.name)}</h3></div>
+      ${ki.top.map(item=>renderKeyInsightBox(s.id,'top',item)).join('')}
+      <button class="add-ki-btn" onclick="addKeyInsight('${s.id}','top')">💡 + Add key insight (top)</button>
       ${tiles.length? `<div class="dash-tiles">`+tiles.map(t=>`
-        <div class="tile"><div class="tile-h"><div class="t">${t.title}</div><div class="rm" onclick="removeTile('${s.id}','${t.id}')">×</div></div>${t.html}</div>
+        <div class="tile"><div class="tile-h"><div class="t">${he(t.title)}</div><div class="rm" onclick="removeTile('${s.id}','${t.id}')">×</div></div>${t.html}</div>
       `).join('')+`</div>` : `<div class="empty-dash">Nothing pinned here yet.</div>`}
+      ${ki.bottom.map(item=>renderKeyInsightBox(s.id,'bottom',item)).join('')}
+      <button class="add-ki-btn" onclick="addKeyInsight('${s.id}','bottom')">💡 + Add key insight (bottom)</button>
     </div>`;
   });
   wrap.innerHTML = html;
@@ -1289,6 +1391,208 @@ function renderDashboard(){
 function removeTile(section,id){
   dashboard[section] = (dashboard[section]||[]).filter(t=>String(t.id)!==String(id));
   renderDashboard(); renderInsightsSrc();
+}
+
+/* ============================= KEY INSIGHT COMPONENT ============================= */
+function wordCount(html){
+  const div = document.createElement('div'); div.innerHTML = html||'';
+  const text = div.innerText || div.textContent || '';
+  return text.trim() ? text.trim().split(/\s+/).length : 0;
+}
+function renderKeyInsightBox(sectionId, pos, item){
+  const boxId = 'ki_'+item.id.toString().replace(/\./g,'_');
+  const n = wordCount(item.html);
+  return `<div class="key-insight" id="${boxId}">
+    <div class="bulb">💡</div>
+    <div class="ki-body">
+      <div class="ki-toolbar">
+        <button type="button" onmousedown="event.preventDefault()" onclick="kiFormat('${boxId}','bold')" title="Bold"><b>B</b></button>
+        <button type="button" onmousedown="event.preventDefault()" onclick="kiFormat('${boxId}','italic')" title="Italic"><i>I</i></button>
+        <select onmousedown="event.preventDefault && null" onchange="kiFormat('${boxId}','fontSize',this.value)" title="Font size">
+          <option value="2">Small</option><option value="3" selected>Normal</option><option value="5">Large</option><option value="6">X-Large</option>
+        </select>
+        <select onchange="kiFormat('${boxId}','fontName',this.value)" title="Font style">
+          <option value="Inter">Inter</option><option value="Georgia">Georgia</option><option value="'IBM Plex Mono'">Mono</option><option value="'Space Grotesk'">Grotesk</option>
+        </select>
+      </div>
+      <div class="ki-text" id="${boxId}_text" contenteditable="true" oninput="updateKeyInsight('${sectionId}','${pos}','${item.id}','${boxId}',this)">${item.html||''}</div>
+      <div class="ki-count" id="${boxId}_count">${n}/50 words</div>
+    </div>
+    <button class="ki-remove" title="Remove" onclick="removeKeyInsight('${sectionId}','${pos}','${item.id}')">×</button>
+  </div>`;
+}
+function addKeyInsight(sectionId, pos){
+  const ki = ensureKI(sectionId);
+  ki[pos].push({id: Date.now()+Math.random(), html:''});
+  renderDashboard();
+}
+function removeKeyInsight(sectionId, pos, id){
+  const ki = ensureKI(sectionId);
+  ki[pos] = ki[pos].filter(k=>String(k.id)!==String(id));
+  renderDashboard();
+}
+function updateKeyInsight(sectionId, pos, id, boxId, el){
+  let text = el.innerText || '';
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if(words.length>50){
+    el.innerText = words.slice(0,50).join(' ');
+    // put the caret at the end after trimming
+    const range = document.createRange(); const sel = window.getSelection();
+    range.selectNodeContents(el); range.collapse(false);
+    sel.removeAllRanges(); sel.addRange(range);
+  }
+  const ki = ensureKI(sectionId);
+  const item = ki[pos].find(k=>String(k.id)===String(id));
+  if(item) item.html = el.innerHTML;
+  const countEl = document.getElementById(boxId+'_count');
+  if(countEl) countEl.textContent = Math.min(words.length,50)+'/50 words';
+  saveState();
+}
+function kiFormat(boxId, cmd, value){
+  const el = document.getElementById(boxId+'_text');
+  if(el) el.focus();
+  try{ document.execCommand(cmd, false, value||null); }catch(e){ console.warn('Formatting command not supported:', e.message); }
+  if(el) el.dispatchEvent(new Event('input'));
+}
+
+/* ============================= DASHBOARD EXPORT: PDF ============================= */
+async function exportDashboardPDF(containerId, filename){
+  const container = document.getElementById(containerId);
+  if(!container || !container.innerHTML.trim()){ alert('Nothing here to export yet.'); return; }
+  if(typeof html2canvas === 'undefined' || !window.jspdf){ alert('PDF export libraries did not load — check your internet connection and try again.'); return; }
+  try{
+    const canvas = await html2canvas(container, {backgroundColor:'#0A0D10', scale:2, useCORS:true});
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','pt','a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    let heightLeft = imgHeight, position = 0;
+    pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+    heightLeft -= pageHeight;
+    while(heightLeft > 0){
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+      heightLeft -= pageHeight;
+    }
+    pdf.save(filename+'.pdf');
+  }catch(err){ alert('Could not generate the PDF: '+err.message); }
+}
+
+/* ============================= DASHBOARD EXPORT: LaTeX ============================= */
+function latexEscape(s){
+  return String(s==null?'':s)
+    .replace(/\\/g,'\\textbackslash{}')
+    .replace(/([%$#&_{}])/g,'\\$1')
+    .replace(/~/g,'\\textasciitilde{}')
+    .replace(/\^/g,'\\textasciicircum{}');
+}
+function htmlToPlain(html){
+  const div = document.createElement('div'); div.innerHTML = html||'';
+  return (div.innerText || div.textContent || '').trim();
+}
+function buildLatexForDashboard(sectionsList, dashboardObj, keyInsightsObj, titleText){
+  let tex = `\\documentclass[11pt]{article}\n\\usepackage[margin=1in]{geometry}\n\\usepackage{booktabs}\n\\usepackage{parskip}\n\\title{${latexEscape(titleText||'XSurvey Analyser --- Dashboard Export')}}\n\\author{XSurvey Analyser}\n\\date{${new Date().toLocaleDateString()}}\n\\begin{document}\n\\maketitle\n`;
+  sectionsList.forEach(s=>{
+    tex += `\\section*{${latexEscape(s.name)}}\n`;
+    const ki = (keyInsightsObj && keyInsightsObj[s.id]) || {top:[],bottom:[]};
+    ki.top.forEach(k=>{ const t=htmlToPlain(k.html); if(t) tex += `\\textit{Key Insight: ${latexEscape(t)}}\\\\[4pt]\n`; });
+    const tiles = (dashboardObj && dashboardObj[s.id]) || [];
+    if(tiles.length===0) tex += `\\emph{Nothing pinned to this section.}\n\n`;
+    tiles.forEach(t=>{
+      tex += `\\subsection*{${latexEscape(t.title)}}\n`;
+      const tmp = document.createElement('div'); tmp.innerHTML = t.html;
+      const table = tmp.querySelector('table');
+      if(table){
+        const trs = [...table.querySelectorAll('tr')];
+        const ncols = trs[0] ? trs[0].children.length : 1;
+        tex += `\\begin{tabular}{${'l'.repeat(Math.max(ncols,1))}}\n\\toprule\n`;
+        trs.forEach((tr,i)=>{
+          const cells = [...tr.children].map(td=>latexEscape(td.textContent.trim()));
+          tex += cells.join(' & ') + ' \\\\\n';
+          if(i===0) tex += '\\midrule\n';
+        });
+        tex += `\\bottomrule\n\\end{tabular}\n\n`;
+      } else {
+        tex += `\\emph{[Chart image --- see the PDF export for the visual]}\n\n`;
+      }
+    });
+    ki.bottom.forEach(k=>{ const t=htmlToPlain(k.html); if(t) tex += `\\textit{Key Insight: ${latexEscape(t)}}\\\\[4pt]\n`; });
+  });
+  tex += `\\end{document}\n`;
+  return tex;
+}
+function downloadTexFile(tex, filename){
+  const blob = new Blob([tex], {type:'text/x-tex'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=filename+'.tex'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+function downloadLatex(){
+  const tex = buildLatexForDashboard(allDashboardSections(), dashboard, keyInsights, fileName ? ('Dashboard --- '+fileName) : 'XSurvey Analyser Dashboard');
+  downloadTexFile(tex, 'xsurvey_dashboard');
+}
+
+/* ============================= DASHBOARD HISTORY: render / view / delete / export ============================= */
+function renderHistory(){
+  const listEl = document.getElementById('history-list');
+  if(!listEl) return;
+  if(dashboardHistory.length===0){
+    listEl.innerHTML = emptyState('No saved dashboard snapshots yet. Snapshots are taken automatically when you remove or replace a dataset, or save one manually from the Dashboard Builder.');
+    return;
+  }
+  listEl.innerHTML = dashboardHistory.map(h=>`
+    <div class="history-card">
+      <div>
+        <div style="font-weight:600;font-size:13px">${he(h.datasetName)}</div>
+        <div class="hint">${new Date(h.savedAt).toLocaleString()} · ${he(h.reason)}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn secondary small" onclick="viewHistorySnapshot('${h.id}')">View</button>
+        <button class="btn secondary small" onclick="exportHistoryPDF('${h.id}')">PDF</button>
+        <button class="btn secondary small" onclick="exportHistoryLatex('${h.id}')">LaTeX</button>
+        <button class="btn secondary small" style="color:var(--danger);border-color:var(--danger)" onclick="deleteHistorySnapshot('${h.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+function findSnapshot(id){ return dashboardHistory.find(h=>String(h.id)===String(id)); }
+function viewHistorySnapshot(id){
+  const h = findSnapshot(id);
+  const wrap = document.getElementById('history-viewer');
+  if(!h || !wrap) return;
+  let inner = '';
+  h.sections.forEach(s=>{
+    const tiles = (h.dashboard && h.dashboard[s.id]) || [];
+    const ki = (h.keyInsights && h.keyInsights[s.id]) || {top:[],bottom:[]};
+    inner += `<div class="dash-section"><div class="dash-section-h"><h3>${he(s.name)}</h3></div>
+      ${ki.top.map(k=>`<div class="key-insight"><div class="bulb">💡</div><div class="ki-body"><div class="ki-text">${k.html||''}</div></div></div>`).join('')}
+      ${tiles.length? `<div class="dash-tiles">`+tiles.map(t=>`<div class="tile"><div class="tile-h"><div class="t">${he(t.title)}</div></div>${t.html}</div>`).join('')+`</div>`:`<div class="empty-dash">Nothing was pinned here.</div>`}
+      ${ki.bottom.map(k=>`<div class="key-insight"><div class="bulb">💡</div><div class="ki-body"><div class="ki-text">${k.html||''}</div></div></div>`).join('')}
+    </div>`;
+  });
+  wrap.innerHTML = `<div class="card"><div class="card-h"><h3>${he(h.datasetName)} — ${new Date(h.savedAt).toLocaleString()}</h3><button class="btn secondary small" onclick="document.getElementById('history-viewer').innerHTML=''">Close</button></div>
+    <div id="history-viewer-content">${inner}</div></div>`;
+}
+async function exportHistoryPDF(id){
+  viewHistorySnapshot(id);
+  await new Promise(r=>setTimeout(r,60));
+  const h = findSnapshot(id);
+  await exportDashboardPDF('history-viewer-content', 'dashboard_'+(h?h.datasetName.replace(/[^a-z0-9]+/gi,'_'):'snapshot'));
+}
+function exportHistoryLatex(id){
+  const h = findSnapshot(id);
+  if(!h) return;
+  const tex = buildLatexForDashboard(h.sections, h.dashboard, h.keyInsights, 'Dashboard --- '+h.datasetName);
+  downloadTexFile(tex, 'dashboard_'+h.datasetName.replace(/[^a-z0-9]+/gi,'_'));
+}
+function deleteHistorySnapshot(id){
+  if(!confirm('Delete this saved dashboard snapshot? This cannot be undone.')) return;
+  dashboardHistory = dashboardHistory.filter(h=>String(h.id)!==String(id));
+  saveHistory(); renderHistory();
+  const wrap = document.getElementById('history-viewer'); if(wrap) wrap.innerHTML='';
 }
 
 /* ============================= INSIGHTS ============================= */
@@ -1324,8 +1628,11 @@ async function generateInsights(){
   let dashboardText = '';
   allDashboardSections().forEach(s=>{
     const tiles = dashboard[s.id]||[];
-    if(tiles.length){
+    const ki = ensureKI(s.id);
+    const kiTexts = [...ki.top, ...ki.bottom].map(k=>htmlToPlain(k.html)).filter(Boolean);
+    if(tiles.length || kiTexts.length){
       dashboardText += `\\n\\n## ${s.name}\\n`;
+      kiTexts.forEach(t=>{ dashboardText += `- Analyst-written key insight: ${t}\\n`; });
       tiles.forEach(t=>{
         const plain = t.html.replace(/<[^>]+>/g,' ').replace(/\\s+/g,' ').trim();
         dashboardText += `- ${t.title}: ${plain}\\n`;
@@ -1340,14 +1647,13 @@ async function generateInsights(){
     });
     const data = await response.json();
     if(!response.ok){ out.innerHTML = '<span style="color:var(--danger)">'+(data.error||'Could not generate report.')+'</span>'; btn.disabled=false; btn.textContent='Regenerate Report'; return; }
-    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\\n');
-    out.textContent = text || 'No response returned.';
+    out.textContent = data.text || 'No response returned.';
   }catch(err){ out.innerHTML = '<span style="color:var(--danger)">Could not generate report: '+err.message+'</span>'; }
   btn.disabled = false; btn.textContent = 'Regenerate Report';
 }
 
 /* ============================= NAV / ROLE ============================= */
-const TAB_TITLES = {upload:'Upload & Preview', clean:'Missing Values & ETL', dict:'Question Dictionary', analysis:'Analysis Workbench', dashboard:'Dashboard Builder', insights:'Generate Insights Report'};
+const TAB_TITLES = {upload:'Upload & Preview', clean:'Missing Values & ETL', dict:'Question Dictionary', analysis:'Analysis Workbench', dashboard:'Dashboard Builder', history:'Dashboard History', insights:'Generate Insights Report'};
 function showTab(tab){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));
   document.getElementById('tab-'+tab).classList.remove('hidden');
@@ -1370,15 +1676,26 @@ document.querySelectorAll('.role-btn').forEach(b=>b.addEventListener('click', fu
 }));
 
 /* ============================= INIT ============================= */
+function safeCall(fn, label){
+  try{ fn(); }catch(err){ console.error(label+' failed:', err); }
+}
 function renderAll(){
-  renderPreview(); renderClean(); renderSectionChips(); renderDictionary();
-  renderModule(currentMod); renderDashboard(); renderInsightsSrc();
+  safeCall(renderPreview, 'renderPreview');
+  safeCall(renderClean, 'renderClean');
+  safeCall(renderSectionChips, 'renderSectionChips');
+  safeCall(renderDictionary, 'renderDictionary');
+  safeCall(()=>renderModule(currentMod), 'renderModule');
+  safeCall(renderDashboard, 'renderDashboard');
+  safeCall(renderInsightsSrc, 'renderInsightsSrc');
+  safeCall(renderHistory, 'renderHistory');
   saveState();
 }
 
 /* ============================= INIT: restore saved dataset, if any ============================= */
+loadHistory();
 const restored = loadState();
 if(!restored) seedDefaultSections();
+if(!keyInsights || Object.keys(keyInsights).length===0){ keyInsights = {}; allDashboardSections().forEach(s=>{ keyInsights[s.id] = {top:[], bottom:[]}; }); }
 renderAll();
 if(restored && columns.length){
   document.getElementById('ds-name').textContent = fileName || 'Restored dataset';

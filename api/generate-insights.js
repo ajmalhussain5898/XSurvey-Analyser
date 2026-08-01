@@ -1,13 +1,12 @@
 // Vercel serverless function — proxies "Generate Insights Report" requests to the
-// Anthropic API. Keeps the API key server-side (never exposed to the browser).
+// Google Gemini API. Keeps the API key server-side (never exposed to the browser).
 //
 // Requires an environment variable set in your Vercel project settings:
-//   ANTHROPIC_API_KEY = sk-ant-...
+//   GEMINI_API_KEY = AIza...
 //
-// The client (index.html) posts { system, message } and gets back the raw
-// Anthropic /v1/messages response, which the front end already knows how to read.
+// The client (index.html) posts { system, message } and gets back { text }.
 
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,10 +14,10 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     res.status(500).json({
-      error: 'ANTHROPIC_API_KEY is not configured on the server. Add it under Vercel Project Settings → Environment Variables, then redeploy.'
+      error: 'GEMINI_API_KEY is not configured on the server. Add it under Vercel Project Settings → Environment Variables, then redeploy.'
     });
     return;
   }
@@ -30,29 +29,39 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+    const geminiRes = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'x-goog-api-key': apiKey
       },
       body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 1000,
-        system: system || undefined,
-        messages: [{ role: 'user', content: message }]
+        systemInstruction: system ? { parts: [{ text: system }] } : undefined,
+        contents: [{ role: 'user', parts: [{ text: message }] }],
+        generationConfig: { maxOutputTokens: 1024, temperature: 0.4 }
       })
     });
 
-    const data = await anthropicRes.json();
+    const data = await geminiRes.json();
 
-    if (!anthropicRes.ok) {
-      res.status(anthropicRes.status).json({ error: data?.error?.message || 'Anthropic API returned an error.' });
+    if (!geminiRes.ok) {
+      res.status(geminiRes.status).json({ error: data?.error?.message || 'Gemini API returned an error.' });
       return;
     }
 
-    res.status(200).json(data);
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const text = parts.map(p => p.text || '').join('');
+
+    if (!text) {
+      // Most likely the response was blocked by a safety filter, or hit the token limit.
+      const finishReason = data?.candidates?.[0]?.finishReason;
+      res.status(200).json({ text: '', warning: finishReason ? `Gemini returned no text (finishReason: ${finishReason}).` : 'Gemini returned an empty response.' });
+      return;
+    }
+
+    res.status(200).json({ text });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Unexpected server error.' });
   }
