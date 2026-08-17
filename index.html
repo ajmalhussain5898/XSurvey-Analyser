@@ -19,6 +19,20 @@
   --accent:#C6FF3D; --accent-dim:#8FBF1E; --accent-ink:#12160A;
   --warn:#FF9752; --danger:#FF6B5B; --ok:#3DD9A0; --radius:10px;
 }
+/* ---- THEME: White ---- */
+html[data-theme="white"]{
+  --bg-0:#F5F6F8; --bg-1:#FFFFFF; --bg-2:#F0F2F4; --bg-3:#E6E9EC;
+  --border:#DBDFE4; --text-0:#12161B; --text-1:#454E58; --text-2:#828B94;
+  --accent:#5C8A0F; --accent-dim:#4A7000; --accent-ink:#FFFFFF;
+  --warn:#B85A15; --danger:#C0392B; --ok:#1E9E71;
+}
+/* ---- THEME: Blue ---- */
+html[data-theme="blue"]{
+  --bg-0:#0A1220; --bg-1:#0F1C33; --bg-2:#152643; --bg-3:#1C325A;
+  --border:#274070; --text-0:#EAF1FC; --text-1:#B3C4E0; --text-2:#7C8FB3;
+  --accent:#4DA3FF; --accent-dim:#2E82E0; --accent-ink:#06101F;
+  --warn:#FFA75C; --danger:#FF7A6E; --ok:#42E0B0;
+}
 *{box-sizing:border-box;}
 body{margin:0;background:var(--bg-0);color:var(--text-0);font-family:'Inter',sans-serif;font-size:14px;}
 h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.01em;}
@@ -134,10 +148,94 @@ tr:hover td{background:var(--bg-2);}
 .add-ki-btn{background:transparent;border:1px dashed var(--border);color:var(--text-2);border-radius:8px;padding:6px 12px;font-size:11.5px;cursor:pointer;margin-bottom:10px;}
 .add-ki-btn:hover{color:var(--accent);border-color:var(--accent);}
 .history-card{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+
+/* ---- Theme switcher ---- */
+.theme-picker{display:flex;align-items:center;gap:6px;}
+.theme-swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid var(--border);padding:0;position:relative;}
+.theme-swatch.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset;}
+.theme-swatch[data-theme-btn="black"]{background:#12161B;}
+.theme-swatch[data-theme-btn="white"]{background:#FFFFFF;}
+.theme-swatch[data-theme-btn="blue"]{background:#123A6B;}
+
+/* ---- Auth screen ---- */
+#auth-screen{position:fixed;inset:0;background:var(--bg-0);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+.auth-card{width:100%;max-width:380px;background:var(--bg-1);border:1px solid var(--border);border-radius:14px;padding:30px 28px;}
+.auth-brand{display:flex;align-items:center;gap:9px;margin-bottom:22px;}
+.auth-title{font-family:'Space Grotesk';font-size:19px;font-weight:600;margin:0 0 4px;}
+.auth-sub{font-size:12.5px;color:var(--text-2);margin:0 0 20px;line-height:1.5;}
+.auth-field{margin-bottom:14px;}
+.auth-field input, .auth-field select, .auth-field textarea{width:100%;padding:9px 11px;font-size:13px;}
+.auth-field textarea{resize:vertical;min-height:56px;font-family:'Inter';}
+.auth-error{background:rgba(255,107,91,.12);border:1px solid rgba(255,107,91,.35);color:var(--danger);border-radius:8px;padding:9px 11px;font-size:12px;margin-bottom:14px;line-height:1.5;}
+.auth-ok{background:rgba(61,217,160,.12);border:1px solid rgba(61,217,160,.35);color:var(--ok);border-radius:8px;padding:9px 11px;font-size:12px;margin-bottom:14px;line-height:1.5;}
+.auth-switch{text-align:center;margin-top:16px;font-size:12px;color:var(--text-2);}
+.auth-switch a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:600;}
+.auth-card button.btn{width:100%;padding:10px;font-size:13px;}
+
+/* ---- Chat ---- */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 210px);min-height:420px;}
+.chat-messages{flex:1;overflow-y:auto;padding:6px 2px;display:flex;flex-direction:column;gap:14px;}
+.chat-msg{max-width:88%;padding:11px 14px;border-radius:12px;font-size:13px;line-height:1.6;white-space:pre-wrap;}
+.chat-msg.user{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:3px;}
+.chat-msg.assistant{align-self:flex-start;background:var(--bg-2);border:1px solid var(--border);border-bottom-left-radius:3px;}
+.chat-msg.assistant.error{border-color:rgba(255,107,91,.4);color:var(--danger);}
+.chat-input-row{display:flex;gap:8px;margin-top:12px;align-items:flex-end;}
+.chat-input-row textarea{flex:1;resize:none;min-height:44px;max-height:140px;padding:10px 12px;font-size:13px;font-family:'Inter';}
+.chat-empty{color:var(--text-2);font-size:12.5px;text-align:center;margin-top:40px;line-height:1.6;}
+
+/* ---- Admin Portal ---- */
+.admin-table-wrap{margin-bottom:24px;}
+.role-pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+.role-pill.admin{background:rgba(255,151,82,.15);color:var(--warn);}
+.role-pill.analyst{background:rgba(198,255,61,.15);color:var(--accent);}
+.role-pill.exec{background:rgba(127,182,255,.15);color:#7FB6FF;}
+.topbar-user{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-1);}
+.topbar-user b{color:var(--text-0);}
 </style>
 </head>
 <body>
-<div id="app">
+
+<!-- ===================== AUTH SCREEN ===================== -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="brand-mark">X</div>
+      <div class="brand-name">XSurvey Analyser</div>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="auth-login-panel">
+      <h2 class="auth-title">Sign in</h2>
+      <p class="auth-sub">Use the email and password sent to you by your Admin.</p>
+      <div id="login-error"></div>
+      <div class="auth-field"><label class="field-label">Email</label><input type="text" id="login-email" placeholder="you@infinix.com"></div>
+      <div class="auth-field"><label class="field-label">Password</label><input type="password" id="login-password" placeholder="••••••••"></div>
+      <button class="btn" id="login-btn" onclick="doLogin()">Sign in</button>
+      <div class="auth-switch">No access yet? <a onclick="showAuthPanel('request')">Request access</a></div>
+    </div>
+
+    <!-- REQUEST ACCESS -->
+    <div id="auth-request-panel" class="hidden">
+      <h2 class="auth-title">Request access</h2>
+      <p class="auth-sub">Your request goes to the tool's Admin for approval. You'll be sent login credentials once approved.</p>
+      <div id="request-error"></div>
+      <div id="request-ok"></div>
+      <div class="auth-field"><label class="field-label">Full name</label><input type="text" id="req-name" placeholder="Jane Doe"></div>
+      <div class="auth-field"><label class="field-label">Work email</label><input type="text" id="req-email" placeholder="jane@infinix.com"></div>
+      <div class="auth-field"><label class="field-label">Access level requested</label>
+        <select id="req-role">
+          <option value="exec">Executive Viewer — Dashboard &amp; AI chat only</option>
+          <option value="analyst">Analyst — full data &amp; analysis access</option>
+        </select>
+      </div>
+      <div class="auth-field"><label class="field-label">Note (optional)</label><textarea id="req-note" placeholder="e.g. Reviewing Q3 Infinix pricing study"></textarea></div>
+      <button class="btn" id="request-btn" onclick="doRequestAccess()">Submit request</button>
+      <div class="auth-switch">Already approved? <a onclick="showAuthPanel('login')">Sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
   <div id="nav">
     <div class="brand">
       <div class="brand-mark">X</div>
@@ -162,11 +260,17 @@ tr:hover td{background:var(--bg-2);}
       <div class="nav-group-label">Insights</div>
       <div class="nav-item" data-tab="insights"><span class="dot"></span>Generate Insights Report</div>
     </div>
+    <div class="nav-group hidden" id="admin-nav-group" data-role-group="admin">
+      <div class="nav-group-label">Administration</div>
+      <div class="nav-item" data-tab="admin"><span class="dot"></span>Admin Portal</div>
+    </div>
+
     <div class="role-switch">
-      <div class="role-switch-label">Viewing as</div>
-      <div class="role-btns">
-        <div class="role-btn active" data-role="analyst">Analyst</div>
-        <div class="role-btn" data-role="exec">Executive Viewer</div>
+      <div class="role-switch-label">Theme</div>
+      <div class="theme-picker">
+        <button class="theme-swatch" data-theme-btn="black" title="Black" onclick="setTheme('black')"></button>
+        <button class="theme-swatch" data-theme-btn="white" title="White" onclick="setTheme('white')"></button>
+        <button class="theme-swatch" data-theme-btn="blue" title="Blue" onclick="setTheme('blue')"></button>
       </div>
     </div>
   </div>
@@ -174,9 +278,11 @@ tr:hover td{background:var(--bg-2);}
   <div id="main">
     <div id="topbar">
       <div class="crumb">XSurvey Analyser / <b id="crumb-tab">Upload &amp; Preview</b></div>
-      <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:14px">
         <div class="ds-pill" id="ds-pill"><span class="n"></span><span id="ds-name">No dataset loaded</span></div>
         <button class="btn secondary small" id="topbar-remove-btn" onclick="removeData()" style="display:none">Remove data</button>
+        <div class="topbar-user">Signed in as <b id="topbar-user-name">—</b> <span class="role-pill" id="topbar-user-role"></span></div>
+        <button class="btn secondary small" onclick="doLogout()">Log out</button>
       </div>
     </div>
 
@@ -287,18 +393,47 @@ tr:hover td{background:var(--bg-2);}
         <div id="history-viewer"></div>
       </section>
 
-      <!-- ===================== INSIGHTS ===================== -->
+      <!-- ===================== INSIGHTS (INTERACTIVE CHAT) ===================== -->
       <section id="tab-insights" class="tab-panel hidden">
-        <h2 class="panel-title">Insights Report</h2>
-        <p class="panel-sub">Reads every tile currently pinned to the Dashboard and drafts a one-page executive brief. Nothing not on the Dashboard gets summarized. Powered by Gemini.</p>
+        <h2 class="panel-title">Generate Insights Report</h2>
+        <p class="panel-sub">An interactive AI chat, grounded in whatever's currently pinned to the Dashboard — ask it anything: draft an executive summary, dig into one section, compare tiles, or ask general questions. Powered by Gemini.</p>
         <div class="card">
-          <div class="card-h"><h3>Dashboard snapshot</h3><span class="hint" id="pinned-count">0 tiles pinned</span></div>
-          <div id="insight-src-list" style="font-size:12px;color:var(--text-1);line-height:1.8"></div>
-          <button class="btn" style="margin-top:14px" onclick="generateInsights()" id="gen-btn">Generate Insights Report</button>
+          <div class="card-h">
+            <h3>Chat</h3>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="hint" id="pinned-count">0 tiles pinned to the Dashboard</span>
+              <button class="btn secondary small" onclick="startNewChat()">New chat</button>
+            </div>
+          </div>
+          <div class="chat-wrap">
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input-row">
+              <textarea id="chat-input" placeholder="Ask about the dashboard, e.g. 'What's the headline takeaway for pricing?'" onkeydown="handleChatKeydown(event)"></textarea>
+              <button class="btn" id="chat-send-btn" onclick="sendChatMessage()">Send</button>
+            </div>
+          </div>
         </div>
-        <div class="card hidden" id="insight-card">
-          <div class="card-h"><h3>Executive Insights Report</h3><button class="btn secondary small" onclick="window.print()">Export PDF</button></div>
-          <div id="insight-out"></div>
+      </section>
+
+      <!-- ===================== ADMIN PORTAL ===================== -->
+      <section id="tab-admin" class="tab-panel hidden">
+        <h2 class="panel-title">Admin Portal</h2>
+        <p class="panel-sub">Approve or reject access requests, and manage everyone who currently has a login. Approving generates a password shown once — send it to the person yourself (WhatsApp/email).</p>
+
+        <div class="card admin-table-wrap">
+          <div class="card-h"><h3>Pending requests</h3><span class="hint" id="admin-pending-count">0 pending</span></div>
+          <div class="grid-wrap"><table id="admin-pending-table"></table></div>
+        </div>
+
+        <div class="card admin-table-wrap">
+          <div class="card-h"><h3>Active users</h3><span class="hint" id="admin-users-count">0 users</span></div>
+          <div class="grid-wrap"><table id="admin-users-table"></table></div>
+        </div>
+
+        <div class="card hidden" id="admin-credential-card">
+          <div class="card-h"><h3>New login created</h3></div>
+          <div id="admin-credential-out" style="font-size:13px;line-height:1.9"></div>
+          <p class="small-note" style="margin-top:10px;margin-bottom:0">This password is shown once and not stored anywhere retrievable — copy it now and send it to the person directly.</p>
         </div>
       </section>
 
@@ -598,11 +733,20 @@ function chartCustomControls(canvasId, redrawFn){
     <label class="grp">Font size <input type="number" min="8" max="16" value="${s.fontSize}" style="width:52px" onchange="getStyle('${canvasId}').fontSize=parseInt(this.value)||10; ${redrawFn}();"></label>
   </div>`;
 }
+function cssVar(name, fallback){
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
 function renderChart(canvasId, type, labels, data, opts={}){
   if(chartRegistry[canvasId]) chartRegistry[canvasId].destroy();
   const ctx = document.getElementById(canvasId).getContext('2d');
   const style = getStyle(canvasId);
   const barColor = opts.color || style.color;
+  const gridColor = cssVar('--border','#1e252c');
+  const tickColor = cssVar('--text-2','#8B929C');
+  const legendColor = cssVar('--text-1','#B7BFC8');
+  const labelOnBarColor = cssVar('--text-0','#EDEFF2');
+  const labelOnPieColor = '#12160A'; // pie datalabels sit on the fixed PALETTE colors, not the theme background — keep this constant for contrast
   const isPie = type==='pie';
   const isStacked = type==='stacked';
   const isLine = type==='line';
@@ -623,14 +767,14 @@ function renderChart(canvasId, type, labels, data, opts={}){
       indexAxis: opts.horizontal?'y':'x',
       responsive:true, maintainAspectRatio:false,
       scales: isPie? {} : {
-        x:{stacked:isStacked, grid:{display:style.grid,color:'#1e252c'}, ticks:{display:style.xLabels, color:'#8B929C', font:{size:style.fontSize}}},
-        y:{stacked:isStacked, grid:{display:style.grid,color:'#1e252c'}, ticks:{display:style.yLabels, color:'#8B929C', font:{size:style.fontSize}}}
+        x:{stacked:isStacked, grid:{display:style.grid,color:gridColor}, ticks:{display:style.xLabels, color:tickColor, font:{size:style.fontSize}}},
+        y:{stacked:isStacked, grid:{display:style.grid,color:gridColor}, ticks:{display:style.yLabels, color:tickColor, font:{size:style.fontSize}}}
       },
       plugins:{
-        legend:{display:isPie||isStacked, labels:{color:'#B7BFC8',font:{size:style.fontSize}}},
+        legend:{display:isPie||isStacked, labels:{color:legendColor,font:{size:style.fontSize}}},
         datalabels:{
           display: !isStacked,
-          color: isPie ? '#0A0D10' : '#EDEFF2',
+          color: isPie ? labelOnPieColor : labelOnBarColor,
           font:{size:style.fontSize,weight:'700'},
           formatter:(val)=> opts.suffix? val+opts.suffix : val,
           anchor: isPie? 'center':'end', align: isPie? 'center':'end', offset: isPie?0:2
@@ -1456,12 +1600,36 @@ function kiFormat(boxId, cmd, value){
 }
 
 /* ============================= DASHBOARD EXPORT: PDF ============================= */
+function sectionHasExportableContent(s){
+  if(!s) return true;
+  const tiles = dashboard[s.id] || [];
+  const ki = keyInsights[s.id] || {top:[], bottom:[]};
+  const kiHasText = [...ki.top, ...ki.bottom].some(k => htmlToPlain(k.html));
+  return tiles.length > 0 || kiHasText;
+}
 async function exportDashboardPDF(containerId, filename){
   const container = document.getElementById(containerId);
   if(!container || !container.innerHTML.trim()){ alert('Nothing here to export yet.'); return; }
   if(typeof html2canvas === 'undefined' || !window.jspdf){ alert('PDF export libraries did not load — check your internet connection and try again.'); return; }
+
+  // Temporarily hide any section with no pinned chart/table AND no key insight text —
+  // those must not appear in the downloadable PDF. Restored afterwards either way.
+  const sectionNodes = [...container.querySelectorAll('.dash-section')];
+  const allSecs = allDashboardSections();
+  const hiddenNodes = [];
+  sectionNodes.forEach((node, i) => {
+    if(!sectionHasExportableContent(allSecs[i])){ node.style.display = 'none'; hiddenNodes.push(node); }
+  });
+
+  if(hiddenNodes.length === sectionNodes.length && sectionNodes.length > 0){
+    hiddenNodes.forEach(n => n.style.display = '');
+    alert('Nothing with a chart, table, or key insight to export yet — pin something to the Dashboard first.');
+    return;
+  }
+
   try{
-    const canvas = await html2canvas(container, {backgroundColor:'#0A0D10', scale:2, useCORS:true});
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-0').trim() || '#0A0D10';
+    const canvas = await html2canvas(container, {backgroundColor:bg, scale:2, useCORS:true});
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p','pt','a4');
@@ -1480,6 +1648,9 @@ async function exportDashboardPDF(containerId, filename){
     }
     pdf.save(filename+'.pdf');
   }catch(err){ alert('Could not generate the PDF: '+err.message); }
+  finally{
+    hiddenNodes.forEach(n => n.style.display = '');
+  }
 }
 
 /* ============================= DASHBOARD EXPORT: LaTeX ============================= */
@@ -1532,7 +1703,9 @@ function downloadTexFile(tex, filename){
   setTimeout(()=>URL.revokeObjectURL(url), 4000);
 }
 function downloadLatex(){
-  const tex = buildLatexForDashboard(allDashboardSections(), dashboard, keyInsights, fileName ? ('Dashboard --- '+fileName) : 'XSurvey Analyser Dashboard');
+  const nonEmptySections = allDashboardSections().filter(sectionHasExportableContent);
+  if(nonEmptySections.length===0){ alert('Nothing with a chart, table, or key insight to export yet — pin something to the Dashboard first.'); return; }
+  const tex = buildLatexForDashboard(nonEmptySections, dashboard, keyInsights, fileName ? ('Dashboard --- '+fileName) : 'XSurvey Analyser Dashboard');
   downloadTexFile(tex, 'xsurvey_dashboard');
 }
 
@@ -1595,85 +1768,351 @@ function deleteHistorySnapshot(id){
   const wrap = document.getElementById('history-viewer'); if(wrap) wrap.innerHTML='';
 }
 
-/* ============================= INSIGHTS ============================= */
-function renderInsightsSrc(){
-  let all=[];
-  allDashboardSections().forEach(s=> (dashboard[s.id]||[]).forEach(t=>all.push({...t, sectionName:s.name})));
-  document.getElementById('pinned-count').textContent = all.length+' tiles pinned';
-  document.getElementById('insight-src-list').innerHTML = all.length
-    ? all.map(t=>`<div>• <b>${t.sectionName}</b> → ${t.title}</div>`).join('')
-    : '<div style="color:var(--text-2)">No tiles pinned yet — pin at least one chart or table from the Analysis Workbench.</div>';
-  document.getElementById('gen-btn').disabled = all.length===0;
-}
-const INSIGHTS_SYSTEM_PROMPT = `You are the Insights Agent inside XSurvey Analyser.
-Your job is to read the charts and tables that the analyst has assembled on a given Dashboard,
-and produce a single-page executive insights report.
+/* ============================= INSIGHTS: INTERACTIVE CHAT ============================= */
+let chatHistory = [];  // [{role:'user'|'assistant', text}]
+const CHAT_STORAGE_KEY = 'xsurvey_chat_history_v1';
+const CHAT_SYSTEM_PROMPT = `You are the Insights Agent inside XSurvey Analyser, an internal survey analysis tool for Infinix.
+You are chatting directly with an analyst or executive. Answer whatever they ask — draft an executive summary,
+explain one section, compare tiles, answer a general question — like a knowledgeable, interactive analyst would.
 
-AUDIENCE: CEO, CFO, and C-suite executives. Time-constrained, commercially minded, want "what does this mean for the business."
+You are given the current Dashboard content below (grouped by section: analyst-written key insights and pinned
+chart/table tiles). Ground any claim about the survey in that content only — never invent a number that isn't
+present in it. If the question needs data that isn't on the Dashboard, say so plainly rather than guessing.
+If the Dashboard is empty, say so and offer to help once something is pinned, but still answer general questions normally.
 
-OUTPUT FORMAT (strict, one page, plain text with simple markdown headers):
-1. HEADLINE TAKEAWAY — one to two sentences.
-2. KEY INSIGHTS (3–5 bullets) — finding, number(s), business implication, in that order. Cite the source section/chart in parentheses.
-3. PRICING & MARGIN IMPLICATION — include if a Pricing Perception tile exists; otherwise note it's not available.
-4. RISKS / WATCH-OUTS — 1–3 bullets on small base sizes or contradictions between sections.
-5. RECOMMENDED NEXT ACTION(S) — 1–3 concrete, specific actions.
+AUDIENCE DEFAULT: assume a time-constrained, commercially minded exec unless the analyst asks for something more technical.
+Keep answers concise and business-relevant; use short paragraphs or bullets, plain English, no stats jargon unless asked.
 
-RULES: only use numbers present in the supplied tiles; never invent a figure. Omit empty sections rather than fabricate. Plain business English, no stats jargon.`;
-async function generateInsights(){
-  const btn = document.getElementById('gen-btn');
-  btn.disabled = true; btn.textContent = 'Generating…';
-  const card = document.getElementById('insight-card'); card.classList.remove('hidden');
-  const out = document.getElementById('insight-out');
-  out.innerHTML = '<span style="color:var(--text-2)">Reading pinned dashboard tiles<span class="loading-dots"></span></span>';
+Current Dashboard content, grouped by section:
+`;
+function currentDashboardText(){
   let dashboardText = '';
   allDashboardSections().forEach(s=>{
     const tiles = dashboard[s.id]||[];
     const ki = ensureKI(s.id);
     const kiTexts = [...ki.top, ...ki.bottom].map(k=>htmlToPlain(k.html)).filter(Boolean);
     if(tiles.length || kiTexts.length){
-      dashboardText += `\\n\\n## ${s.name}\\n`;
-      kiTexts.forEach(t=>{ dashboardText += `- Analyst-written key insight: ${t}\\n`; });
+      dashboardText += `\n\n## ${s.name}\n`;
+      kiTexts.forEach(t=>{ dashboardText += `- Analyst-written key insight: ${t}\n`; });
       tiles.forEach(t=>{
-        const plain = t.html.replace(/<[^>]+>/g,' ').replace(/\\s+/g,' ').trim();
-        dashboardText += `- ${t.title}: ${plain}\\n`;
+        const plain = t.html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+        dashboardText += `- ${t.title}: ${plain}\n`;
       });
     }
   });
+  return dashboardText.trim() || '(Nothing is pinned to the Dashboard yet.)';
+}
+function renderInsightsSrc(){
+  let all=[];
+  allDashboardSections().forEach(s=> (dashboard[s.id]||[]).forEach(t=>all.push({...t, sectionName:s.name})));
+  const el = document.getElementById('pinned-count');
+  if(el) el.textContent = all.length+' tiles pinned to the Dashboard';
+}
+function loadChatHistory(){
+  try{ const raw = localStorage.getItem(CHAT_STORAGE_KEY); chatHistory = raw ? JSON.parse(raw) : []; }
+  catch(e){ chatHistory = []; }
+}
+function saveChatHistory(){
+  try{ localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(chatHistory)); }catch(e){}
+}
+function renderChat(){
+  const wrap = document.getElementById('chat-messages');
+  if(!wrap) return;
+  if(chatHistory.length===0){
+    wrap.innerHTML = '<div class="chat-empty">Ask anything about the current Dashboard — or start with "Draft a one-page executive summary."</div>';
+    return;
+  }
+  wrap.innerHTML = chatHistory.map(m=>{
+    const cls = m.role==='user' ? 'user' : (m.error ? 'assistant error' : 'assistant');
+    return `<div class="chat-msg ${cls}">${he(m.text)}</div>`;
+  }).join('');
+  wrap.scrollTop = wrap.scrollHeight;
+}
+function startNewChat(){
+  chatHistory = [];
+  saveChatHistory();
+  renderChat();
+}
+function handleChatKeydown(e){
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChatMessage(); }
+}
+async function sendChatMessage(){
+  const input = document.getElementById('chat-input');
+  const text = (input.value||'').trim();
+  if(!text) return;
+  input.value = '';
+  chatHistory.push({role:'user', text});
+  renderChat(); saveChatHistory();
+
+  const btn = document.getElementById('chat-send-btn');
+  btn.disabled = true; btn.textContent = 'Thinking…';
+  chatHistory.push({role:'assistant', text:'…', pending:true});
+  renderChat();
+
+  const system = CHAT_SYSTEM_PROMPT + currentDashboardText();
+  const messagesForApi = chatHistory.filter(m=>!m.pending).map(m=>({role:m.role, text:m.text}));
+
   try{
-    const response = await fetch("/api/generate-insights", {
-      method: "POST", headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ system: INSIGHTS_SYSTEM_PROMPT,
-        message: "Dashboard content, grouped by section:\\n"+dashboardText+"\\n\\nWrite the executive insights report now." })
+    const response = await authedFetch('/api/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ system, messages: messagesForApi })
     });
     const data = await response.json();
-    if(!response.ok){ out.innerHTML = '<span style="color:var(--danger)">'+(data.error||'Could not generate report.')+'</span>'; btn.disabled=false; btn.textContent='Regenerate Report'; return; }
-    out.textContent = data.text || 'No response returned.';
-  }catch(err){ out.innerHTML = '<span style="color:var(--danger)">Could not generate report: '+err.message+'</span>'; }
-  btn.disabled = false; btn.textContent = 'Regenerate Report';
+    chatHistory.pop(); // remove the pending placeholder
+    if(!response.ok){ chatHistory.push({role:'assistant', text: data.error || 'Could not get a response.', error:true}); }
+    else{ chatHistory.push({role:'assistant', text: data.text || data.warning || 'No response returned.'}); }
+  }catch(err){
+    chatHistory.pop();
+    chatHistory.push({role:'assistant', text:'Could not reach the AI service: '+err.message, error:true});
+  }
+  renderChat(); saveChatHistory();
+  btn.disabled = false; btn.textContent = 'Send';
+}
+
+/* ============================= THEME ============================= */
+const THEME_KEY = 'xsurvey_theme_v1';
+function setTheme(name){
+  document.documentElement.setAttribute('data-theme', name);
+  try{ localStorage.setItem(THEME_KEY, name); }catch(e){}
+  document.querySelectorAll('.theme-swatch').forEach(b=> b.classList.toggle('active', b.dataset.themeBtn===name));
+  // Re-render the active Analysis Workbench chart so gridlines/labels pick up the new theme colors.
+  // (Charts already pinned to the Dashboard are flattened PNG snapshots taken at pin time and
+  // intentionally don't change retroactively — same as any exported image.)
+  if(typeof renderModule==='function' && typeof currentMod!=='undefined'){
+    try{ renderModule(currentMod); }catch(e){}
+  }
+}
+function initTheme(){
+  let saved = 'black';
+  try{ saved = localStorage.getItem(THEME_KEY) || 'black'; }catch(e){}
+  setTheme(saved);
+}
+
+/* ============================= AUTH ============================= */
+const AUTH_KEY = 'xsurvey_auth_v1';
+let currentUser = null; // {token, name, email, role}
+
+function decodeTokenPayload(token){
+  try{
+    const part = token.split('.')[0];
+    const b64 = part.replace(/-/g,'+').replace(/_/g,'/');
+    const json = decodeURIComponent(atob(b64).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    return JSON.parse(json);
+  }catch(e){ return null; }
+}
+function loadAuth(){
+  try{
+    const raw = localStorage.getItem(AUTH_KEY);
+    if(!raw) return null;
+    const auth = JSON.parse(raw);
+    const payload = decodeTokenPayload(auth.token);
+    if(!payload || !payload.exp || Date.now() > payload.exp) return null;
+    return auth;
+  }catch(e){ return null; }
+}
+function saveAuth(auth){ try{ localStorage.setItem(AUTH_KEY, JSON.stringify(auth)); }catch(e){} }
+function clearAuth(){ try{ localStorage.removeItem(AUTH_KEY); }catch(e){} }
+
+async function authedFetch(url, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers, currentUser ? {'Authorization':'Bearer '+currentUser.token} : {});
+  const res = await fetch(url, opts);
+  if(res.status===401){ doLogout('Your session expired — please sign in again.'); }
+  return res;
+}
+
+function showAuthPanel(which){
+  document.getElementById('auth-login-panel').classList.toggle('hidden', which!=='login');
+  document.getElementById('auth-request-panel').classList.toggle('hidden', which!=='request');
+  document.getElementById('login-error').innerHTML = '';
+  document.getElementById('request-error').innerHTML = '';
+  document.getElementById('request-ok').innerHTML = '';
+}
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.innerHTML = '';
+  if(!email || !password){ errEl.innerHTML = '<div class="auth-error">Enter both email and password.</div>'; return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try{
+    const res = await fetch('/api/auth-login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password})});
+    const data = await res.json();
+    if(!res.ok){ errEl.innerHTML = '<div class="auth-error">'+he(data.error||'Could not sign in.')+'</div>'; btn.disabled=false; btn.textContent='Sign in'; return; }
+    const auth = {token:data.token, name:data.name, email:data.email, role:data.role};
+    saveAuth(auth);
+    enterApp(auth);
+  }catch(err){
+    errEl.innerHTML = '<div class="auth-error">Could not reach the server: '+he(err.message)+'</div>';
+  }
+  btn.disabled = false; btn.textContent = 'Sign in';
+}
+async function doRequestAccess(){
+  const name = document.getElementById('req-name').value.trim();
+  const email = document.getElementById('req-email').value.trim();
+  const roleRequested = document.getElementById('req-role').value;
+  const note = document.getElementById('req-note').value.trim();
+  const errEl = document.getElementById('request-error'); const okEl = document.getElementById('request-ok');
+  errEl.innerHTML = ''; okEl.innerHTML = '';
+  if(!name || !email){ errEl.innerHTML = '<div class="auth-error">Enter your name and work email.</div>'; return; }
+  const btn = document.getElementById('request-btn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  try{
+    const res = await fetch('/api/auth-request-access', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,email,roleRequested,note})});
+    const data = await res.json();
+    if(!res.ok){ errEl.innerHTML = '<div class="auth-error">'+he(data.error||'Could not submit request.')+'</div>'; }
+    else{
+      okEl.innerHTML = '<div class="auth-ok">Request submitted. You\'ll receive login details once an Admin approves it.</div>';
+      document.getElementById('req-name').value=''; document.getElementById('req-email').value=''; document.getElementById('req-note').value='';
+    }
+  }catch(err){
+    errEl.innerHTML = '<div class="auth-error">Could not reach the server: '+he(err.message)+'</div>';
+  }
+  btn.disabled = false; btn.textContent = 'Submit request';
+}
+function doLogout(message){
+  clearAuth();
+  currentUser = null;
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('auth-screen').style.display = 'flex';
+  showAuthPanel('login');
+  if(message){ document.getElementById('login-error').innerHTML = '<div class="auth-error">'+he(message)+'</div>'; }
+}
+function applyRoleUI(role){
+  const notExec = role !== 'exec'; // analyst & admin get full data/analysis access, exec is view-only
+  document.querySelectorAll('[data-role-group="analyst"]').forEach(el=> el.style.display = notExec ? '' : 'none');
+  const fb = document.getElementById('analyst-only-filterbar'); if(fb) fb.style.display = notExec ? '' : 'none';
+  const as = document.getElementById('analyst-only-addsection'); if(as) as.style.display = notExec ? '' : 'none';
+  const dashSub = document.getElementById('dash-sub');
+  if(dashSub) dashSub.textContent = notExec
+    ? "A canvas you build deliberately — nothing here is auto-populated. Pin a chart or a table from the Analysis Workbench into any section below, or add your own custom section."
+    : 'View-only. Executive Viewer sees Dashboard and Insights Report only — no Data or Analysis tabs, no edit access.';
+  const adminGroup = document.getElementById('admin-nav-group');
+  if(adminGroup) adminGroup.classList.toggle('hidden', role!=='admin');
+}
+function enterApp(auth){
+  currentUser = auth;
+  role = auth.role==='admin' ? 'analyst' : auth.role; // admins see the full analyst UI plus the Admin Portal tab
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('topbar-user-name').textContent = auth.name;
+  const roleEl = document.getElementById('topbar-user-role');
+  roleEl.textContent = auth.role;
+  roleEl.className = 'role-pill '+auth.role;
+  applyRoleUI(auth.role);
+  initApp();
+  showTab(auth.role==='exec' ? 'dashboard' : 'upload');
+}
+
+/* ============================= ADMIN PORTAL ============================= */
+async function loadAdminPortal(){
+  const pendingTable = document.getElementById('admin-pending-table');
+  const usersTable = document.getElementById('admin-users-table');
+  pendingTable.innerHTML = '<tr><td style="color:var(--text-2)">Loading…</td></tr>';
+  try{
+    const res = await authedFetch('/api/admin-list');
+    const data = await res.json();
+    if(!res.ok){ pendingTable.innerHTML = '<tr><td style="color:var(--danger)">'+he(data.error||'Could not load.')+'</td></tr>'; return; }
+    renderAdminPending(data.pending||[]);
+    renderAdminUsers(data.users||[]);
+  }catch(err){
+    pendingTable.innerHTML = '<tr><td style="color:var(--danger)">Could not reach the server: '+he(err.message)+'</td></tr>';
+  }
+}
+function renderAdminPending(pending){
+  document.getElementById('admin-pending-count').textContent = pending.length+' pending';
+  const t = document.getElementById('admin-pending-table');
+  if(pending.length===0){ t.innerHTML = '<tr><td style="color:var(--text-2);padding:10px">No pending requests.</td></tr>'; return; }
+  t.innerHTML = '<tr><th>Name</th><th>Email</th><th>Requested</th><th>Requested on</th><th></th></tr>' +
+    pending.map(p=>`<tr>
+      <td>${he(p.name)}</td>
+      <td>${he(p.email)}</td>
+      <td><span class="role-pill ${he(p.roleRequested)}">${he(p.roleRequested)}</span></td>
+      <td>${new Date(p.requestedAt).toLocaleDateString()}</td>
+      <td style="white-space:nowrap">
+        <select id="approve-role-${qi(p.email)}" style="margin-right:6px">
+          <option value="exec" ${p.roleRequested==='exec'?'selected':''}>Executive Viewer</option>
+          <option value="analyst" ${p.roleRequested==='analyst'?'selected':''}>Analyst</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="btn small" onclick="approveRequest('${qi(p.email)}')">Approve</button>
+        <button class="btn secondary small" onclick="rejectRequest('${qi(p.email)}')">Reject</button>
+      </td>
+    </tr>`).join('');
+}
+function renderAdminUsers(users){
+  document.getElementById('admin-users-count').textContent = users.length+' user'+(users.length===1?'':'s');
+  const t = document.getElementById('admin-users-table');
+  if(users.length===0){ t.innerHTML = '<tr><td style="color:var(--text-2);padding:10px">No users yet.</td></tr>'; return; }
+  t.innerHTML = '<tr><th>Name</th><th>Email</th><th>Role</th><th>Added</th><th></th></tr>' +
+    users.map(u=>`<tr>
+      <td>${he(u.name)}</td>
+      <td>${he(u.email)}</td>
+      <td><span class="role-pill ${he(u.role)}">${he(u.role)}</span></td>
+      <td>${new Date(u.createdAt).toLocaleDateString()}</td>
+      <td style="white-space:nowrap">
+        <select onchange="changeUserRole('${qi(u.email)}', this.value)" style="margin-right:6px">
+          <option value="exec" ${u.role==='exec'?'selected':''}>Executive Viewer</option>
+          <option value="analyst" ${u.role==='analyst'?'selected':''}>Analyst</option>
+          <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+        </select>
+        <button class="btn secondary small" style="border-color:var(--danger);color:var(--danger)" onclick="revokeUserAccess('${qi(u.email)}')" ${u.email===currentUser.email?'disabled title="You can\'t revoke your own access"':''}>Revoke</button>
+      </td>
+    </tr>`).join('');
+}
+async function approveRequest(email){
+  const roleSelect = document.getElementById('approve-role-'+email);
+  const role = roleSelect ? roleSelect.value : 'exec';
+  try{
+    const res = await authedFetch('/api/admin-approve', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, role})});
+    const data = await res.json();
+    if(!res.ok){ alert(data.error||'Could not approve this request.'); return; }
+    const card = document.getElementById('admin-credential-card'); card.classList.remove('hidden');
+    document.getElementById('admin-credential-out').innerHTML =
+      `<div><b>${he(data.name)}</b> (${he(data.email)}) — role: <span class="role-pill ${he(data.role)}">${he(data.role)}</span></div>
+       <div class="mono" style="margin-top:8px;font-size:15px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:inline-block">Password: <b>${he(data.tempPassword)}</b></div>`;
+    card.scrollIntoView({behavior:'smooth', block:'nearest'});
+    loadAdminPortal();
+  }catch(err){ alert('Could not reach the server: '+err.message); }
+}
+async function rejectRequest(email){
+  if(!confirm('Reject this access request?')) return;
+  try{
+    const res = await authedFetch('/api/admin-reject', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email})});
+    if(!res.ok){ const data = await res.json(); alert(data.error||'Could not reject this request.'); return; }
+    loadAdminPortal();
+  }catch(err){ alert('Could not reach the server: '+err.message); }
+}
+async function revokeUserAccess(email){
+  if(!confirm('Revoke access for '+email+'? They will be logged out and unable to sign in again until re-approved.')) return;
+  try{
+    const res = await authedFetch('/api/admin-revoke', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email})});
+    const data = await res.json();
+    if(!res.ok){ alert(data.error||'Could not revoke access.'); return; }
+    loadAdminPortal();
+  }catch(err){ alert('Could not reach the server: '+err.message); }
+}
+async function changeUserRole(email, role){
+  try{
+    const res = await authedFetch('/api/admin-role', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, role})});
+    const data = await res.json();
+    if(!res.ok){ alert(data.error||'Could not update role.'); loadAdminPortal(); return; }
+    loadAdminPortal();
+  }catch(err){ alert('Could not reach the server: '+err.message); }
 }
 
 /* ============================= NAV / ROLE ============================= */
-const TAB_TITLES = {upload:'Upload & Preview', clean:'Missing Values & ETL', dict:'Question Dictionary', analysis:'Analysis Workbench', dashboard:'Dashboard Builder', history:'Dashboard History', insights:'Generate Insights Report'};
+const TAB_TITLES = {upload:'Upload & Preview', clean:'Missing Values & ETL', dict:'Question Dictionary', analysis:'Analysis Workbench', dashboard:'Dashboard Builder', history:'Dashboard History', insights:'Generate Insights Report', admin:'Admin Portal'};
 function showTab(tab){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));
   document.getElementById('tab-'+tab).classList.remove('hidden');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.tab===tab));
   document.getElementById('crumb-tab').textContent = TAB_TITLES[tab];
+  if(tab==='admin') loadAdminPortal();
 }
 document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click', ()=>showTab(n.dataset.tab)));
 document.querySelectorAll('.module-card').forEach(n=>n.addEventListener('click', ()=>renderModule(n.dataset.mod)));
-document.querySelectorAll('.role-btn').forEach(b=>b.addEventListener('click', function(){
-  document.querySelectorAll('.role-btn').forEach(x=>x.classList.remove('active'));
-  this.classList.add('active');
-  role = this.dataset.role;
-  document.querySelectorAll('[data-role-group="analyst"]').forEach(el=> el.style.display = role==='analyst' ? '' : 'none');
-  const fb = document.getElementById('analyst-only-filterbar'); if(fb) fb.style.display = role==='analyst' ? '' : 'none';
-  const as = document.getElementById('analyst-only-addsection'); if(as) as.style.display = role==='analyst' ? '' : 'none';
-  document.getElementById('dash-sub').textContent = role==='exec'
-    ? 'View-only. Executive Viewer sees Dashboard and Insights Report only — no Data or Analysis tabs, no edit access.'
-    : "A canvas you build deliberately — nothing here is auto-populated. Pin a chart or a table from the Analysis Workbench into any section below, or add your own custom section.";
-  showTab(role==='exec' ? 'dashboard' : 'upload');
-}));
 
 /* ============================= INIT ============================= */
 function safeCall(fn, label){
@@ -1691,20 +2130,27 @@ function renderAll(){
   saveState();
 }
 
-/* ============================= INIT: restore saved dataset, if any ============================= */
-loadHistory();
-const restored = loadState();
-if(!restored) seedDefaultSections();
-if(!keyInsights || Object.keys(keyInsights).length===0){ keyInsights = {}; allDashboardSections().forEach(s=>{ keyInsights[s.id] = {top:[], bottom:[]}; }); }
-renderAll();
-if(restored && columns.length){
-  document.getElementById('ds-name').textContent = fileName || 'Restored dataset';
-  document.getElementById('ds-pill').classList.add('has-data');
-  document.getElementById('topbar-remove-btn').style.display = '';
-  document.getElementById('remove-data-card').style.display = '';
-  document.getElementById('upload-status').textContent = 'Restored '+rows.length+' rows × '+columns.length+' columns saved in this browser.';
+function initApp(){
+  loadHistory();
+  const restored = loadState();
+  if(!restored) seedDefaultSections();
+  if(!keyInsights || Object.keys(keyInsights).length===0){ keyInsights = {}; allDashboardSections().forEach(s=>{ keyInsights[s.id] = {top:[], bottom:[]}; }); }
+  loadChatHistory();
+  renderAll();
+  renderChat();
+  if(restored && columns.length){
+    document.getElementById('ds-name').textContent = fileName || 'Restored dataset';
+    document.getElementById('ds-pill').classList.add('has-data');
+    document.getElementById('topbar-remove-btn').style.display = '';
+    document.getElementById('remove-data-card').style.display = '';
+    document.getElementById('upload-status').textContent = 'Restored '+rows.length+' rows × '+columns.length+' columns saved in this browser.';
+  }
 }
-showTab('upload');
+
+/* ============================= BOOT: theme + auth gate ============================= */
+initTheme();
+const savedAuth = loadAuth();
+if(savedAuth){ enterApp(savedAuth); } else { showAuthPanel('login'); }
 </script>
 </body>
 </html>

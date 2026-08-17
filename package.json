@@ -1,9 +1,12 @@
 {
   "name": "xsurvey-analyser",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "XSurvey Analyser — internal survey analysis tool for Infinix.",
+  "description": "XSurvey Analyser — internal survey analysis tool for Infinix, with login, role-based access, an Admin Portal, and an interactive AI chat.",
   "scripts": {
     "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.38.2"
   }
 }
