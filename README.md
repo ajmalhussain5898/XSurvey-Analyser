@@ -3,7 +3,7 @@
 A single-page survey analysis tool built for Infinix — upload a survey export, build a
 Question Dictionary, run Frequency/Cross-Tab/Multi-Response/Descriptive analysis plus
 PSM (Van Westendorp & Gabor-Granger), Max-Diff, Conjoint, and Kano, assemble an
-executive Dashboard, and generate an AI-written Insights Report.
+executive Dashboard, and generate an AI-written Insights Report
 
 ## Project structure
 
