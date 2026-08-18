@@ -5,12 +5,12 @@
 // Env vars required:
 //   GEMINI_API_KEY = AIza...
 //   SESSION_SECRET = <same secret used to sign login tokens>
-//   GEMINI_MODEL (optional, defaults below)
+//   GEMINI_MODEL (optional, defaults to gemini-3.6-flash below)
 //
 // POST body: { system: string, messages: [{role:'user'|'assistant', text:string}, ...] }
 // -> { text }
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const { requireAuth } = require('../lib/auth');
 
 module.exports = async function handler(req, res) {
