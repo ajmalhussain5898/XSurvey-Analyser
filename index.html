@@ -107,10 +107,13 @@ tr:hover td{background:var(--bg-2);}
 .dash-section-h h3{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.06em;color:var(--text-1);flex:1;}
 .dash-tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
 .tile{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
-.tile-h{display:flex;justify-content:space-between;align-items:start;margin-bottom:10px;}
+.tile-h{display:flex;justify-content:space-between;align-items:start;margin-bottom:10px;gap:8px;}
 .tile-h .t{font-size:12.5px;font-weight:600;}
-.tile-h .rm{color:var(--text-2);cursor:pointer;font-size:15px;line-height:1;}
+.tile-h .rm{color:var(--text-2);cursor:pointer;font-size:15px;line-height:1;flex-shrink:0;}
 .tile-h .rm:hover{color:var(--danger);}
+.tile-title-input{flex:1;background:transparent;border:1px solid transparent;color:var(--text-0);font-family:'Inter';font-size:12.5px;font-weight:600;padding:3px 6px;border-radius:5px;min-width:0;}
+.tile-title-input:hover{background:var(--bg-2);border-color:var(--border);}
+.tile-title-input:focus{background:var(--bg-2);border-color:var(--accent);outline:none;}
 .tile img{width:100%;border-radius:6px;}
 .tile table{font-size:11px;}
 .empty-dash{border:1px dashed var(--border);border-radius:var(--radius);padding:26px;text-align:center;color:var(--text-2);font-size:12px;}
@@ -461,6 +464,7 @@ let uid = 0; const newId = ()=> 'sec_'+(++uid)+'_'+Math.random().toString(36).sl
 
 function seedDefaultSections(){
   sections = [
+    {id:newId(), name:"Executive Summary"},
     {id:newId(), name:"Demographics Profile"},
     {id:newId(), name:"Awareness, Current Brand & Purchase Consideration"},
     {id:newId(), name:"Purchase Reasons / Factors"},
@@ -787,22 +791,32 @@ function chartTypeSelector(id, opts){
   </select>`;
 }
 function pinFormControls(prefix){
-  return `<div class="field-row" style="margin-top:14px;margin-bottom:0;align-items:center">
+  return `<div class="field-row" style="margin-top:14px;margin-bottom:0;align-items:flex-end;flex-wrap:wrap">
+    <div style="flex:1;min-width:220px"><label class="field-label">Tile title (shown on Dashboard)</label><input type="text" class="qd-input" id="${prefix}-title" placeholder="e.g. Brand Awareness by Age Group" oninput="this.dataset.dirty='1'"></div>
     <div><label class="field-label">Pin as</label><select id="${prefix}-form"><option value="chart">Chart</option><option value="table">Table</option></select></div>
     <div><label class="field-label">Dashboard section</label><select id="${prefix}-section">${allDashboardSections().map(s=>`<option value="${s.id}">${he(s.name)}</option>`).join('')}</select></div>
     <button class="btn small" onclick="pinCurrent('${prefix}')">Pin to Dashboard</button>
   </div>`;
+}
+// Keeps the title input pre-filled with a sensible default, without overwriting anything the
+// analyst has already typed. Called every time a module redraws its chart/table.
+function syncPinTitle(prefix, defaultTitle){
+  const input = document.getElementById(prefix+'-title');
+  if(input && !input.dataset.dirty){ input.value = defaultTitle; }
+  return defaultTitle;
 }
 function pinCurrent(prefix){
   const buf = window._pinBuffer && window._pinBuffer[prefix];
   if(!buf) return;
   const form = document.getElementById(prefix+'-form').value;
   const section = document.getElementById(prefix+'-section').value;
+  const titleInput = document.getElementById(prefix+'-title');
+  const title = (titleInput && titleInput.value.trim()) ? titleInput.value.trim() : buf.title;
   let html;
   if(form==='chart' && buf.canvasId && chartRegistry[buf.canvasId]) html = `<img src="${chartRegistry[buf.canvasId].toBase64Image()}">`;
   else html = tableHtml(buf.headers, buf.rowsArr);
   dashboard[section] = dashboard[section] || [];
-  dashboard[section].push({id:Date.now()+Math.random(), title:buf.title, html});
+  dashboard[section].push({id:Date.now()+Math.random(), title, html});
   renderDashboard(); renderInsightsSrc();
   const btn = event.target; const old = btn.textContent;
   btn.textContent='✓ Pinned'; setTimeout(()=>btn.textContent=old,1300);
@@ -1108,7 +1122,7 @@ function drawFreq(){
   const vals = view==='pct'? data.map(d=>Math.round(d[1]/total*1000)/10) : data.map(d=>d[1]);
   renderChart('chart-freq', type, labels, vals, {horizontal:type!=='pie'&&type!=='line', thick:22, suffix: view==='pct'?'%':''});
   document.getElementById('freq-table').innerHTML = tableHtml(['Value','n','%'], data.map(d=>[d[0], d[1], Math.round(d[1]/total*1000)/10+'%']));
-  window._pinBuffer['freq'] = {canvasId:'chart-freq', title:dict[col].short+' — Frequency', headers:['Value','n','%'], rowsArr:data.map(d=>[d[0],d[1],Math.round(d[1]/total*1000)/10])};
+  window._pinBuffer['freq'] = {canvasId:'chart-freq', title:syncPinTitle('freq', dict[col].short+' — Frequency'), headers:['Value','n','%'], rowsArr:data.map(d=>[d[0],d[1],Math.round(d[1]/total*1000)/10])};
   window._chartBuffer['freq'] = {title:dict[col].short+' — Frequency', headers:['Value', metricLabel], rows: labels.map((l,i)=>[l, vals[i]]), type: type==='stacked'?'column':type, filename:'frequency'};
 }
 
@@ -1144,7 +1158,7 @@ function drawCross(){
     renderChart('chart-cross', type==='stacked'?'stacked':type, rowVals, [], {series, suffix:'%'});
   }
   const exportRows = rowVals.map((rv,i)=>[rv, ...colVals.map(cv=>series.find(s=>s.label===cv).data[i])]);
-  window._pinBuffer['cross'] = {canvasId:'chart-cross', title:dict[rowCol].short+' × '+dict[colCol].short, headers:[dict[rowCol].short, ...colVals], rowsArr:exportRows};
+  window._pinBuffer['cross'] = {canvasId:'chart-cross', title:syncPinTitle('cross', dict[rowCol].short+' × '+dict[colCol].short), headers:[dict[rowCol].short, ...colVals], rowsArr:exportRows};
   if(type==='pie'){
     window._chartBuffer['cross'] = {title:dict[rowCol].short+' × '+dict[colCol].short, headers:[dict[rowCol].short,'Count'], rows: pieLabels.map((l,i)=>[l,pieVals[i]]), type:'pie', filename:'cross_tab'};
   } else {
@@ -1164,7 +1178,7 @@ function drawMulti(){
   const metricLabel = base==='resp'? '% of respondents':'% of mentions';
   renderChart('chart-multi', type, labels, vals, {horizontal:type!=='pie'&&type!=='line', thick:16, color:'#8FBF1E', suffix:'%'});
   document.getElementById('multi-table').innerHTML = tableHtml(['Item','n','%'], data.map((d,i)=>[d[0], d[1], vals[i]+'%']));
-  window._pinBuffer['multi'] = {canvasId:'chart-multi', title:dict[col].short+' — % of respondents', headers:['Item','n','%'], rowsArr:data.map((d,i)=>[d[0],d[1],vals[i]])};
+  window._pinBuffer['multi'] = {canvasId:'chart-multi', title:syncPinTitle('multi', dict[col].short+' — % of respondents'), headers:['Item','n','%'], rowsArr:data.map((d,i)=>[d[0],d[1],vals[i]])};
   window._chartBuffer['multi'] = {title:dict[col].short, headers:['Item', metricLabel], rows: labels.map((l,i)=>[l, vals[i]]), type: type==='stacked'?'column':type, filename:'multi_response'};
 }
 
@@ -1186,7 +1200,7 @@ function drawDesc(){
   const labels = counts.map((_,i)=>Math.round(min+i*w)+'–'+Math.round(min+(i+1)*w));
   renderChart('chart-desc','column',labels,counts,{});
   document.getElementById('desc-table').innerHTML = tableHtml(['Bucket','n'], labels.map((l,i)=>[l,counts[i]]));
-  window._pinBuffer['desc'] = {canvasId:'chart-desc', title:dict[col].short+' — Descriptives', headers:['Bucket','n'], rowsArr:labels.map((l,i)=>[l,counts[i]])};
+  window._pinBuffer['desc'] = {canvasId:'chart-desc', title:syncPinTitle('desc', dict[col].short+' — Descriptives'), headers:['Bucket','n'], rowsArr:labels.map((l,i)=>[l,counts[i]])};
   window._chartBuffer['desc'] = {title:dict[col].short+' — Distribution', headers:['Bucket','n'], rows: labels.map((l,i)=>[l,counts[i]]), type:'column', filename:'descriptives'};
 }
 
@@ -1263,7 +1277,7 @@ function computeVW(){
   const tableRows = points.map((p,i)=>[p, tooCheapCurve[i]+'%', cheapCurve[i]+'%', expensiveCurve[i]+'%', tooExpensiveCurve[i]+'%']);
   document.getElementById('vw-table-wrap').innerHTML = tableHtml(['Price','Too cheap %','Cheap %','Expensive %','Too expensive %'], tableRows);
   window._pinBuffer = window._pinBuffer||{};
-  window._pinBuffer['vw'] = {canvasId:'chart-vw', title:'Van Westendorp — Price Sensitivity', headers:['Price','Too cheap %','Cheap %','Expensive %','Too expensive %'], rowsArr: points.map((p,i)=>[p,tooCheapCurve[i],cheapCurve[i],expensiveCurve[i],tooExpensiveCurve[i]])};
+  window._pinBuffer['vw'] = {canvasId:'chart-vw', title:syncPinTitle('vw', 'Van Westendorp — Price Sensitivity'), headers:['Price','Too cheap %','Cheap %','Expensive %','Too expensive %'], rowsArr: points.map((p,i)=>[p,tooCheapCurve[i],cheapCurve[i],expensiveCurve[i],tooExpensiveCurve[i]])};
   window._chartBuffer = window._chartBuffer||{};
   window._chartBuffer['vw'] = {title:'Van Westendorp — Price Sensitivity', headers:['Price','Too cheap %','Cheap %','Expensive %','Too expensive %'], rows: points.map((p,i)=>['PKR '+p,tooCheapCurve[i],cheapCurve[i],expensiveCurve[i],tooExpensiveCurve[i]]), type:'line', filename:'van_westendorp'};
 }
@@ -1324,7 +1338,7 @@ function computeGG(){
   renderChart('chart-gg','column', sorted.map(r=>'PKR '+Number(r.price).toLocaleString()), intent, {suffix:'%'});
   document.getElementById('gg-table-wrap').innerHTML = tableHtml(['Price','Purchase intent %','Projected revenue'], sorted.map((r,i)=>[Number(r.price).toLocaleString(), intent[i]+'%', revenue[i].toLocaleString()]));
   window._pinBuffer = window._pinBuffer||{};
-  window._pinBuffer['gg'] = {canvasId:'chart-gg', title:'Gabor-Granger — Demand Curve', headers:['Price','Purchase intent %','Projected revenue'], rowsArr: sorted.map((r,i)=>[r.price,intent[i],revenue[i]])};
+  window._pinBuffer['gg'] = {canvasId:'chart-gg', title:syncPinTitle('gg', 'Gabor-Granger — Demand Curve'), headers:['Price','Purchase intent %','Projected revenue'], rowsArr: sorted.map((r,i)=>[r.price,intent[i],revenue[i]])};
   window._chartBuffer = window._chartBuffer||{};
   window._chartBuffer['gg'] = {title:'Gabor-Granger — Demand Curve', headers:['Price','Purchase intent %','Projected revenue (PKR)'], rows: sorted.map((r,i)=>['PKR '+r.price,intent[i],revenue[i]]), type:'column', filename:'gabor_granger'};
 }
@@ -1373,7 +1387,7 @@ function computeMD(){
   renderChart('chart-md','column', scored.map(s=>s.it), share, {horizontal:true, thick:16, suffix:'%'});
   document.getElementById('md-table-wrap').innerHTML = tableHtml(['Item','Best %','Worst %','Preference share'], scored.map((s,i)=>[s.it, Math.round(s.bPct*10)/10+'%', Math.round(s.wPct*10)/10+'%', share[i]+'%']));
   window._pinBuffer = window._pinBuffer||{};
-  window._pinBuffer['md'] = {canvasId:'chart-md', title:'Max-Diff — Preference Share', headers:['Item','Best %','Worst %','Preference share'], rowsArr:scored.map((s,i)=>[s.it, Math.round(s.bPct*10)/10, Math.round(s.wPct*10)/10, share[i]])};
+  window._pinBuffer['md'] = {canvasId:'chart-md', title:syncPinTitle('md', 'Max-Diff — Preference Share'), headers:['Item','Best %','Worst %','Preference share'], rowsArr:scored.map((s,i)=>[s.it, Math.round(s.bPct*10)/10, Math.round(s.wPct*10)/10, share[i]])};
   window._chartBuffer = window._chartBuffer||{};
   window._chartBuffer['md'] = {title:'Max-Diff — Preference Share', headers:['Item','Best %','Worst %','Preference share %'], rows: scored.map((s,i)=>[s.it, Math.round(s.bPct*10)/10, Math.round(s.wPct*10)/10, share[i]]), type:'column', filename:'maxdiff'};
 }
@@ -1417,7 +1431,7 @@ function computeCJ(){
   renderChart('chart-cj','pie', entries.map(e=>e[0]), imp, {});
   document.getElementById('cj-table-wrap').innerHTML = tableHtml(['Factor','Borda score','Relative importance'], entries.map((e,i)=>[e[0], e[1], imp[i]+'%']));
   window._pinBuffer = window._pinBuffer||{};
-  window._pinBuffer['cj'] = {canvasId:'chart-cj', title:'Conjoint (stated-rank) — Attribute Importance', headers:['Factor','Borda score','Relative importance'], rowsArr: entries.map((e,i)=>[e[0],e[1],imp[i]])};
+  window._pinBuffer['cj'] = {canvasId:'chart-cj', title:syncPinTitle('cj', 'Conjoint (stated-rank) — Attribute Importance'), headers:['Factor','Borda score','Relative importance'], rowsArr: entries.map((e,i)=>[e[0],e[1],imp[i]])};
   window._chartBuffer = window._chartBuffer||{};
   window._chartBuffer['cj'] = {title:'Conjoint — Attribute Importance', headers:['Factor','Relative importance %'], rows: entries.map((e,i)=>[e[0], imp[i]]), type:'pie', filename:'conjoint_importance'};
 }
@@ -1502,7 +1516,7 @@ function computeKano(){
     results.map(r=>[r.name, labelMap[r.dominant], '+'+r.CS, r.DS, r.n])
   );
   window._pinBuffer = window._pinBuffer||{};
-  window._pinBuffer['kano'] = {canvasId:null, title:'Kano — Feature Classification', headers:['Feature','Classification','Satisfaction coef.','Dissatisfaction coef.','Base (n)'], rowsArr: results.map(r=>[r.name, labelMap[r.dominant], r.CS, r.DS, r.n])};
+  window._pinBuffer['kano'] = {canvasId:null, title:syncPinTitle('kano', 'Kano — Feature Classification'), headers:['Feature','Classification','Satisfaction coef.','Dissatisfaction coef.','Base (n)'], rowsArr: results.map(r=>[r.name, labelMap[r.dominant], r.CS, r.DS, r.n])};
 }
 
 /* ============================= DASHBOARD ============================= */
@@ -1519,14 +1533,21 @@ function renderDashboard(){
       ${ki.top.map(item=>renderKeyInsightBox(s.id,'top',item)).join('')}
       <button class="add-ki-btn" onclick="addKeyInsight('${s.id}','top')">💡 + Add key insight (top)</button>
       ${tiles.length? `<div class="dash-tiles">`+tiles.map(t=>`
-        <div class="tile"><div class="tile-h"><div class="t">${he(t.title)}</div><div class="rm" onclick="removeTile('${s.id}','${t.id}')">×</div></div>${t.html}</div>
+        <div class="tile"><div class="tile-h"><input class="tile-title-input" value="${ha(t.title)}" title="Click to rename this tile" onchange="renameTile('${s.id}','${t.id}', this.value)"><div class="rm" onclick="removeTile('${s.id}','${t.id}')">×</div></div>${t.html}</div>
       `).join('')+`</div>` : `<div class="empty-dash">Nothing pinned here yet.</div>`}
       ${ki.bottom.map(item=>renderKeyInsightBox(s.id,'bottom',item)).join('')}
-      <button class="add-ki-btn" onclick="addKeyInsight('${s.id}','bottom')">💡 + Add key insight (bottom)</button>
     </div>`;
   });
   wrap.innerHTML = html;
   saveState();
+}
+function renameTile(sectionId, tileId, newTitle){
+  const arr = dashboard[sectionId] || [];
+  const t = arr.find(x=>String(x.id)===String(tileId));
+  if(!t) return;
+  t.title = newTitle.trim() || t.title;
+  saveState();
+  renderInsightsSrc();
 }
 function removeTile(section,id){
   dashboard[section] = (dashboard[section]||[]).filter(t=>String(t.id)!==String(id));
