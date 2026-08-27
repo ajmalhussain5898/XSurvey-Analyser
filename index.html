@@ -12,6 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <style>
 :root{
   --bg-0:#0A0D10; --bg-1:#12161B; --bg-2:#1A2027; --bg-3:#222A32;
@@ -105,8 +106,18 @@ tr:hover td{background:var(--bg-2);}
 .dash-section{margin-bottom:26px;}
 .dash-section-h{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
 .dash-section-h h3{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.06em;color:var(--text-1);flex:1;}
-.dash-tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
-.tile{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.dash-tiles{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;}
+.tile{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;grid-column:span 6;min-width:0;}
+.tile.tile-size-sm{grid-column:span 4;}
+.tile.tile-size-md{grid-column:span 6;}
+.tile.tile-size-lg{grid-column:span 8;}
+.tile.tile-size-full{grid-column:span 12;}
+.tile-content{overflow:auto;resize:vertical;min-height:120px;}
+.tile-content table td[contenteditable="true"], .tile-content table th[contenteditable="true"]{outline:none;border-radius:3px;}
+.tile-content table td[contenteditable="true"]:hover, .tile-content table th[contenteditable="true"]:hover{background:var(--bg-2);cursor:text;}
+.tile-content table td[contenteditable="true"]:focus, .tile-content table th[contenteditable="true"]:focus{background:var(--bg-2);box-shadow:inset 0 0 0 1px var(--accent);}
+.tile-size-select{font-size:10.5px;padding:3px 4px;border-radius:5px;margin-right:2px;flex-shrink:0;}
+@media (max-width: 900px){ .tile{grid-column:span 12 !important;} }
 .tile-h{display:flex;justify-content:space-between;align-items:start;margin-bottom:10px;gap:8px;}
 .tile-h .t{font-size:12.5px;font-weight:600;}
 .tile-h .rm{color:var(--text-2);cursor:pointer;font-size:15px;line-height:1;flex-shrink:0;}
@@ -433,10 +444,11 @@ tr:hover td{background:var(--bg-2);}
           <div class="card-h"><h3>Export &amp; share</h3><span class="hint">Snapshot this Dashboard as-is</span></div>
           <div class="download-row" style="margin-top:0">
             <button class="btn secondary small" onclick="exportDashboardPDF('dash-sections','xsurvey_dashboard')">Download Dashboard as PDF</button>
+            <button class="btn secondary small" id="export-pptx-btn" onclick="exportDashboardPPTX()">Download as PowerPoint (one slide per section)</button>
             <button class="btn secondary small" onclick="downloadLatex()">Download LaTeX (.tex)</button>
             <button class="btn secondary small" onclick="snapshotDashboard('Manual save'); renderHistory(); alert('Saved to Dashboard History.');">Save snapshot to History</button>
           </div>
-          <p class="small-note" style="margin-top:10px;margin-bottom:0">PDF renders exactly what's on screen. The .tex file is real LaTeX source (sections, key insights, and tile tables) — compile it with Overleaf or a local TeX distribution for a print-quality PDF; it isn't compiled in-browser.</p>
+          <p class="small-note" style="margin-top:10px;margin-bottom:0">PDF renders exactly what's on screen. PowerPoint gives one editable slide per section — key insights and pinned tables come in as real, editable PPT text/tables, charts come in as images (since they're pinned as flattened snapshots). The .tex file is real LaTeX source — compile it with Overleaf or a local TeX distribution for a print-quality PDF; it isn't compiled in-browser.</p>
         </div>
 
         <div id="dash-sections"></div>
@@ -991,6 +1003,28 @@ function deleteDerivedVariable(id){
 }
 
 /* ============================= HELPERS: freq / chart / export ============================= */
+// Builds an (initially empty) multi-select for excluding specific answer options — not just
+// blanks — from a table/chart/base. e.g. drop a noisy "Other (please specify)" write-in, or
+// an outlier category, from the analysis. Options are filled in by renderExcludeValuesOptions()
+// right after the module's HTML is mounted, and refreshed whenever the source question changes.
+function excludeValuesControl(id, onchangeFnName){
+  return `<div style="margin-top:10px">
+    <label class="field-label">Exclude specific answer options (optional — ctrl/cmd-click to select several)</label>
+    <select id="${id}" multiple size="4" style="width:100%;min-height:76px" onchange="${onchangeFnName}()"></select>
+  </div>`;
+}
+function renderExcludeValuesOptions(selectId, col){
+  const el = document.getElementById(selectId);
+  if(!el) return;
+  const prevSelected = new Set([...el.selectedOptions].map(o=>o.value));
+  const values = col ? uniqueSourceValues(col) : [];
+  el.innerHTML = values.map(v=>`<option value="${ha(v)}" ${prevSelected.has(v)?'selected':''}>${he(v)}</option>`).join('');
+}
+function getExcludedValues(selectId){
+  const el = document.getElementById(selectId);
+  if(!el) return [];
+  return [...el.selectedOptions].map(o=>o.value);
+}
 function freqOf(col, excludeMissing){
   const counts = {};
   rows.forEach(r=>{
@@ -1036,7 +1070,8 @@ function cssVar(name, fallback){
 }
 function renderChart(canvasId, type, labels, data, opts={}){
   if(chartRegistry[canvasId]) chartRegistry[canvasId].destroy();
-  const ctx = document.getElementById(canvasId).getContext('2d');
+  const canvasEl = document.getElementById(canvasId);
+  const container = canvasEl.parentElement;
   const style = getStyle(canvasId);
   const barColor = opts.color || style.color;
   const gridColor = cssVar('--border','#1e252c');
@@ -1045,32 +1080,51 @@ function renderChart(canvasId, type, labels, data, opts={}){
   const labelOnBarColor = cssVar('--text-0','#EDEFF2');
   const labelOnPieColor = '#12160A'; // pie datalabels sit on the fixed PALETTE colors, not the theme background — keep this constant for contrast
   const isPie = type==='pie';
-  const isStacked = type==='stacked';
   const isLine = type==='line';
+  const isStacked = type==='stacked' || type==='stacked-bar';
+  const isClustered = type==='clustered' || type==='clustered-bar';
+  const isMultiSeries = (isStacked || isClustered) && opts.series && opts.series.length;
+  const isHorizontal = !!opts.horizontal || type==='stacked-bar' || type==='clustered-bar';
+  const isBarFamily = !isPie && !isLine;
+
+  // Each bar/category needs enough room so bars never touch or overlap — grow the
+  // chart's container instead of squeezing everything into a fixed box (this was the
+  // cause of bars visually running together on questions with many answer options).
+  if(container && container.classList.contains('chart-box')){
+    if(isHorizontal && isBarFamily){
+      const thick = opts.thick || 20;
+      const barsPerCategory = (isClustered && isMultiSeries) ? opts.series.length : 1;
+      const rowHeight = barsPerCategory * (thick+6) + 16;
+      container.style.height = Math.max(300, labels.length * rowHeight) + 'px';
+    } else {
+      container.style.height = '300px';
+    }
+  }
+
   let datasets;
-  if(isStacked && opts.series){
-    datasets = opts.series.map((s,i)=>({label:s.label, data:s.data, backgroundColor: PALETTE[i%PALETTE.length]}));
+  if(isMultiSeries){
+    datasets = opts.series.map((s,i)=>({label:s.label, data:s.data, backgroundColor: PALETTE[i%PALETTE.length], borderRadius:3, barThickness: opts.thick}));
   } else if(isPie){
     datasets = [{data, backgroundColor: labels.map((_,i)=>PALETTE[i%PALETTE.length])}];
   } else if(isLine){
     datasets = [{data, borderColor: barColor, backgroundColor:'transparent', tension:.25, pointRadius:2, borderWidth:2}];
   } else {
-    datasets = [{data, backgroundColor: barColor, borderRadius:4, barThickness: opts.thick}];
+    datasets = [{data, backgroundColor: barColor, borderRadius:4, barThickness: opts.thick, maxBarThickness: opts.thick}];
   }
-  chartRegistry[canvasId] = new Chart(ctx, {
+  chartRegistry[canvasId] = new Chart(canvasEl.getContext('2d'), {
     type: isPie?'pie':(isLine?'line':'bar'),
     data:{labels, datasets},
     options:{
-      indexAxis: opts.horizontal?'y':'x',
+      indexAxis: isHorizontal?'y':'x',
       responsive:true, maintainAspectRatio:false,
       scales: isPie? {} : {
         x:{stacked:isStacked, grid:{display:style.grid,color:gridColor}, ticks:{display:style.xLabels, color:tickColor, font:{size:style.fontSize}}},
         y:{stacked:isStacked, grid:{display:style.grid,color:gridColor}, ticks:{display:style.yLabels, color:tickColor, font:{size:style.fontSize}}}
       },
       plugins:{
-        legend:{display:isPie||isStacked, labels:{color:legendColor,font:{size:style.fontSize}}},
+        legend:{display:isPie||isMultiSeries, labels:{color:legendColor,font:{size:style.fontSize}}},
         datalabels:{
-          display: !isStacked,
+          display: !isMultiSeries,
           color: isPie ? labelOnPieColor : labelOnBarColor,
           font:{size:style.fontSize,weight:'700'},
           formatter:(val)=> opts.suffix? val+opts.suffix : val,
@@ -1085,6 +1139,15 @@ function chartTypeSelector(id, opts){
     <option value="column">Column</option><option value="pie">Pie</option>
     ${opts.stacked? '<option value="stacked">Stacked</option>':''}
     <option value="line">Line</option>
+  </select>`;
+}
+function crossChartTypeSelector(id, onchange){
+  return `<select id="${id}" onchange="${onchange}">
+    <option value="clustered">Clustered Column</option>
+    <option value="stacked">Stacked Column</option>
+    <option value="clustered-bar">Clustered Bar</option>
+    <option value="stacked-bar">Stacked Bar</option>
+    <option value="pie">Pie (row totals)</option>
   </select>`;
 }
 function pinFormControls(prefix){
@@ -1313,9 +1376,11 @@ function renderModule(mod){
         <div><label class="field-label">Question</label><select id="freq-col">${catCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
         <div><label class="field-label">Display</label><select id="freq-view"><option value="pct">%</option><option value="n">Count (n)</option></select></div>
         <div><label class="field-label">Chart type</label>${chartTypeSelector('freq-type',{onchange:'drawFreq()'})}</div>
+        <div><label class="field-label">Shorten labels to</label><input type="number" id="freq-maxlabel" value="0" min="0" style="width:64px" onchange="drawFreq()" title="0 = no limit"></div>
         <button class="btn secondary small" onclick="drawFreq()">Update</button>
       </div>
       <label class="checkbox-row"><input type="checkbox" id="freq-exclude-missing" onchange="drawFreq()"> Exclude blank/missing responses from the table, chart, and % base</label>
+      ${excludeValuesControl('freq-exclude-values','drawFreq')}
       <div class="two-col">
         <div class="chart-box"><canvas id="chart-freq"></canvas></div>
         <div id="freq-table"></div>
@@ -1327,7 +1392,9 @@ function renderModule(mod){
       </div>
       ${pinFormControls('freq')}
     </div>`;
-    ['freq-col','freq-view'].forEach(id=>document.getElementById(id).addEventListener('change', drawFreq));
+    document.getElementById('freq-col').addEventListener('change', function(){ renderExcludeValuesOptions('freq-exclude-values', this.value); drawFreq(); });
+    document.getElementById('freq-view').addEventListener('change', drawFreq);
+    renderExcludeValuesOptions('freq-exclude-values', document.getElementById('freq-col').value);
     drawFreq();
   }
 
@@ -1337,10 +1404,15 @@ function renderModule(mod){
       <div class="field-row">
         <div><label class="field-label">Row question</label><select id="cross-row">${catCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
         <div><label class="field-label">Banner (columns)</label><select id="cross-col">${catCols.map((c,i)=>`<option value="${ha(c)}" ${i===1?'selected':''}>${ha(dict[c].short)}</option>`).join('')}</select></div>
-        <div><label class="field-label">Chart type</label>${chartTypeSelector('cross-type',{onchange:'drawCross()',stacked:true})}</div>
+        <div><label class="field-label">Chart type</label>${crossChartTypeSelector('cross-type','drawCross()')}</div>
+        <div><label class="field-label">Shorten row labels to</label><input type="number" id="cross-maxlabel" value="0" min="0" style="width:64px" onchange="drawCross()" title="0 = no limit"></div>
         <button class="btn secondary small" onclick="drawCross()">Update</button>
       </div>
       <label class="checkbox-row"><input type="checkbox" id="cross-exclude-missing" onchange="drawCross()"> Exclude respondents blank on either question, so every column's %s sum to 100</label>
+      <div class="two-col">
+        ${excludeValuesControl('cross-exclude-row-values','drawCross')}
+        ${excludeValuesControl('cross-exclude-col-values','drawCross')}
+      </div>
       <div id="cross-table-wrap" class="grid-wrap" style="margin-bottom:14px"></div>
       <div class="chart-box"><canvas id="chart-cross"></canvas></div>
       ${chartCustomControls('chart-cross','drawCross')}
@@ -1351,7 +1423,10 @@ function renderModule(mod){
       ${pinFormControls('cross')}
     </div>`;
     document.getElementById('cross-type').value='stacked';
-    ['cross-row','cross-col'].forEach(id=>document.getElementById(id).addEventListener('change', drawCross));
+    document.getElementById('cross-row').addEventListener('change', function(){ renderExcludeValuesOptions('cross-exclude-row-values', this.value); drawCross(); });
+    document.getElementById('cross-col').addEventListener('change', function(){ renderExcludeValuesOptions('cross-exclude-col-values', this.value); drawCross(); });
+    renderExcludeValuesOptions('cross-exclude-row-values', document.getElementById('cross-row').value);
+    renderExcludeValuesOptions('cross-exclude-col-values', document.getElementById('cross-col').value);
     drawCross();
   }
 
@@ -1363,9 +1438,11 @@ function renderModule(mod){
         <div><label class="field-label">Multi-response question</label><select id="multi-col">${maCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
         <div><label class="field-label">Base</label><select id="multi-base"><option value="resp">% of respondents</option><option value="mention">% of mentions</option></select></div>
         <div><label class="field-label">Chart type</label>${chartTypeSelector('multi-type',{onchange:'drawMulti()'})}</div>
+        <div><label class="field-label">Shorten labels to</label><input type="number" id="multi-maxlabel" value="28" min="0" style="width:64px" onchange="drawMulti()" title="0 = no limit"></div>
         <button class="btn secondary small" onclick="drawMulti()">Update</button>
       </div>
       <label class="checkbox-row"><input type="checkbox" id="multi-include-blank" onchange="drawMulti()"> Include respondents who left this question completely blank in the base (% of total sample, not just those who answered)</label>
+      ${excludeValuesControl('multi-exclude-values','drawMulti')}
       <div class="two-col">
         <div class="chart-box" style="height:340px"><canvas id="chart-multi"></canvas></div>
         <div id="multi-table" style="max-height:340px;overflow-y:auto"></div>
@@ -1377,7 +1454,9 @@ function renderModule(mod){
       </div>
       ${pinFormControls('multi')}
     </div>`;
-    ['multi-col','multi-base'].forEach(id=>document.getElementById(id).addEventListener('change', drawMulti));
+    document.getElementById('multi-col').addEventListener('change', function(){ renderExcludeValuesOptions('multi-exclude-values', this.value); drawMulti(); });
+    document.getElementById('multi-base').addEventListener('change', drawMulti);
+    renderExcludeValuesOptions('multi-exclude-values', document.getElementById('multi-col').value);
     drawMulti();
   }
 
@@ -1418,9 +1497,12 @@ function drawFreq(){
   const view = document.getElementById('freq-view').value;
   const type = document.getElementById('freq-type').value;
   const excludeMissing = document.getElementById('freq-exclude-missing').checked;
-  const data = freqOf(col, excludeMissing);
+  const excludedVals = getExcludedValues('freq-exclude-values');
+  let data = freqOf(col, excludeMissing);
+  if(excludedVals.length) data = data.filter(d=> !excludedVals.includes(d[0]));
   const total = data.reduce((s,d)=>s+d[1],0) || 1; // base = whatever's actually shown, so % always sums to 100
-  const labels = data.map(d=>d[0]);
+  const maxLen = parseInt(document.getElementById('freq-maxlabel').value)||0;
+  const labels = data.map(d=> maxLen>0 && d[0].length>maxLen ? d[0].slice(0,maxLen)+'…' : d[0]);
   const metricLabel = view==='pct'?'%':'n';
   const vals = view==='pct'? data.map(d=>Math.round(d[1]/total*1000)/10) : data.map(d=>d[1]);
   renderChart('chart-freq', type, labels, vals, {horizontal:type!=='pie'&&type!=='line', thick:22, suffix: view==='pct'?'%':''});
@@ -1434,9 +1516,13 @@ function drawCross(){
   const colCol = document.getElementById('cross-col').value;
   const type = document.getElementById('cross-type').value;
   const excludeMissing = document.getElementById('cross-exclude-missing').checked;
+  const excludedRowVals = getExcludedValues('cross-exclude-row-values');
+  const excludedColVals = getExcludedValues('cross-exclude-col-values');
   const baseRows = excludeMissing ? rows.filter(r=> r[rowCol]!=="" && r[colCol]!=="") : rows;
-  const rowVals = [...new Set(baseRows.map(r=>r[rowCol]))].filter(v=>v!=="");
-  const colVals = [...new Set(baseRows.map(r=>r[colCol]))].filter(v=>v!=="");
+  let rowVals = [...new Set(baseRows.map(r=>r[rowCol]))].filter(v=>v!=="");
+  let colVals = [...new Set(baseRows.map(r=>r[colCol]))].filter(v=>v!=="");
+  if(excludedRowVals.length) rowVals = rowVals.filter(v=>!excludedRowVals.includes(v));
+  if(excludedColVals.length) colVals = colVals.filter(v=>!excludedColVals.includes(v));
   const colBase = {}; colVals.forEach(cv=>colBase[cv]=baseRows.filter(r=>r[colCol]===cv).length);
 
   let head = '<tr><th>'+he(dict[rowCol].short)+'</th>'+colVals.map(cv=>`<th>${he(cv)} (n=${colBase[cv]})</th>`).join('')+'</tr>';
@@ -1454,20 +1540,22 @@ function drawCross(){
     const n = baseRows.filter(r=>r[rowCol]===rv && r[colCol]===cv).length;
     return colBase[cv]? Math.round(n/colBase[cv]*1000)/10 : 0;
   })}));
+  const maxLen = parseInt(document.getElementById('cross-maxlabel').value)||0;
+  const chartRowLabels = maxLen>0 ? rowVals.map(rv=> rv.length>maxLen? rv.slice(0,maxLen)+'…' : rv) : rowVals;
   let pieLabels=null, pieVals=null;
   if(type==='pie'){
     const overall = rowVals.map(rv=> baseRows.filter(r=>r[rowCol]===rv).length);
-    pieLabels=rowVals; pieVals=overall;
-    renderChart('chart-cross','pie', rowVals, overall, {});
+    pieLabels=chartRowLabels; pieVals=overall;
+    renderChart('chart-cross','pie', chartRowLabels, overall, {});
   } else {
-    renderChart('chart-cross', type==='stacked'?'stacked':type, rowVals, [], {series, suffix:'%'});
+    renderChart('chart-cross', type, chartRowLabels, [], {series, thick:18, suffix:'%'});
   }
   const exportRows = rowVals.map((rv,i)=>[rv, ...colVals.map(cv=>series.find(s=>s.label===cv).data[i])]);
   window._pinBuffer['cross'] = {canvasId:'chart-cross', title:syncPinTitle('cross', dict[rowCol].short+' × '+dict[colCol].short), headers:[dict[rowCol].short, ...colVals], rowsArr:exportRows};
   if(type==='pie'){
     window._chartBuffer['cross'] = {title:dict[rowCol].short+' × '+dict[colCol].short, headers:[dict[rowCol].short,'Count'], rows: pieLabels.map((l,i)=>[l,pieVals[i]]), type:'pie', filename:'cross_tab'};
   } else {
-    window._chartBuffer['cross'] = {title:dict[rowCol].short+' × '+dict[colCol].short, headers:[dict[rowCol].short, ...colVals], rows: exportRows, type: type==='stacked'?'stacked':(type==='line'?'line':'column'), filename:'cross_tab'};
+    window._chartBuffer['cross'] = {title:dict[rowCol].short+' × '+dict[colCol].short, headers:[dict[rowCol].short, ...colVals], rows: exportRows, type: (type==='stacked'||type==='stacked-bar')?'stacked':'column', filename:'cross_tab'};
   }
 }
 
@@ -1476,10 +1564,13 @@ function drawMulti(){
   const base = document.getElementById('multi-base').value;
   const type = document.getElementById('multi-type').value;
   const includeBlankInBase = document.getElementById('multi-include-blank').checked;
-  const data = maFreqOf(col);
+  const excludedVals = getExcludedValues('multi-exclude-values');
+  let data = maFreqOf(col);
+  if(excludedVals.length) data = data.filter(d=> !excludedVals.includes(d[0]));
   const total = includeBlankInBase ? rows.length : rows.filter(r=>r[col]).length;
   const totalMentions = data.reduce((s,d)=>s+d[1],0);
-  const labels = data.map(d=>d[0].length>28? d[0].slice(0,28)+'…':d[0]);
+  const maxLen = parseInt(document.getElementById('multi-maxlabel').value)||0;
+  const labels = data.map(d=> maxLen>0 && d[0].length>maxLen ? d[0].slice(0,maxLen)+'…' : d[0]);
   const vals = base==='resp'? data.map(d=>Math.round(d[1]/total*1000)/10) : data.map(d=>Math.round(d[1]/totalMentions*1000)/10);
   const metricLabel = base==='resp'? '% of respondents':'% of mentions';
   renderChart('chart-multi', type, labels, vals, {horizontal:type!=='pie'&&type!=='line', thick:16, color:'#8FBF1E', suffix:'%'});
@@ -1830,6 +1921,7 @@ function computeKano(){
 }
 
 /* ============================= DASHBOARD ============================= */
+const TILE_SIZES = [['sm','Small'],['md','Medium'],['lg','Large'],['full','Full width']];
 function renderDashboard(){
   const wrap = document.getElementById('dash-sections');
   const all = allDashboardSections();
@@ -1843,12 +1935,34 @@ function renderDashboard(){
       ${ki.top.map(item=>renderKeyInsightBox(s.id,'top',item)).join('')}
       <button class="add-ki-btn" onclick="addKeyInsight('${s.id}','top')">💡 + Add key insight (top)</button>
       ${tiles.length? `<div class="dash-tiles">`+tiles.map(t=>`
-        <div class="tile"><div class="tile-h"><input class="tile-title-input" value="${ha(t.title)}" title="Click to rename this tile" onchange="renameTile('${s.id}','${t.id}', this.value)"><div class="rm" onclick="removeTile('${s.id}','${t.id}')">×</div></div>${t.html}</div>
+        <div class="tile tile-size-${t.size||'md'}" data-section="${s.id}" data-tile="${t.id}">
+          <div class="tile-h">
+            <input class="tile-title-input" value="${ha(t.title)}" title="Click to rename this tile" onchange="renameTile('${s.id}','${t.id}', this.value)">
+            <select class="tile-size-select" title="Resize this tile" onchange="resizeTile('${s.id}','${t.id}', this.value)">
+              ${TILE_SIZES.map(([v,label])=>`<option value="${v}" ${(t.size||'md')===v?'selected':''}>${label}</option>`).join('')}
+            </select>
+            <div class="rm" onclick="removeTile('${s.id}','${t.id}')">×</div>
+          </div>
+          <div class="tile-content">${t.html}</div>
+        </div>
       `).join('')+`</div>` : `<div class="empty-dash">Nothing pinned here yet.</div>`}
       ${ki.bottom.map(item=>renderKeyInsightBox(s.id,'bottom',item)).join('')}
     </div>`;
   });
   wrap.innerHTML = html;
+  // Table tiles (not chart images) are plain HTML tables — make their cells directly editable,
+  // so headers/labels/values can be fixed or shortened right on the Dashboard without re-pinning.
+  wrap.querySelectorAll('.tile').forEach(tileEl=>{
+    const sectionId = tileEl.dataset.section, tileId = tileEl.dataset.tile;
+    const contentEl = tileEl.querySelector('.tile-content');
+    const table = contentEl && contentEl.querySelector('table');
+    if(table){
+      table.querySelectorAll('td,th').forEach(cell=>{
+        cell.contentEditable = 'true';
+        cell.addEventListener('blur', ()=> saveTileTableEdit(sectionId, tileId, contentEl));
+      });
+    }
+  });
   saveState();
 }
 function renameTile(sectionId, tileId, newTitle){
@@ -1858,6 +1972,21 @@ function renameTile(sectionId, tileId, newTitle){
   t.title = newTitle.trim() || t.title;
   saveState();
   renderInsightsSrc();
+}
+function resizeTile(sectionId, tileId, size){
+  const arr = dashboard[sectionId] || [];
+  const t = arr.find(x=>String(x.id)===String(tileId));
+  if(!t) return;
+  t.size = size;
+  saveState();
+  renderDashboard();
+}
+function saveTileTableEdit(sectionId, tileId, contentEl){
+  const arr = dashboard[sectionId] || [];
+  const t = arr.find(x=>String(x.id)===String(tileId));
+  if(!t) return;
+  t.html = contentEl.innerHTML;
+  saveState();
 }
 function removeTile(section,id){
   dashboard[section] = (dashboard[section]||[]).filter(t=>String(t.id)!==String(id));
@@ -1954,6 +2083,13 @@ async function exportDashboardPDF(containerId, filename){
     return;
   }
 
+  // Tiles can be manually resized shorter than their content (drag handle, bottom-right corner) —
+  // temporarily remove that clipping so the export always shows everything, not just what's
+  // currently visible on screen. Restored afterwards either way.
+  const contentEls = [...container.querySelectorAll('.tile-content')];
+  const prevStyles = contentEls.map(el => ({height:el.style.height, maxHeight:el.style.maxHeight, overflow:el.style.overflow, resize:el.style.resize}));
+  contentEls.forEach(el=>{ el.style.height='auto'; el.style.maxHeight='none'; el.style.overflow='visible'; el.style.resize='none'; });
+
   try{
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-0').trim() || '#0A0D10';
     const canvas = await html2canvas(container, {backgroundColor:bg, scale:2, useCORS:true});
@@ -1977,6 +2113,85 @@ async function exportDashboardPDF(containerId, filename){
   }catch(err){ alert('Could not generate the PDF: '+err.message); }
   finally{
     hiddenNodes.forEach(n => n.style.display = '');
+    contentEls.forEach((el,i)=>{ el.style.height=prevStyles[i].height; el.style.maxHeight=prevStyles[i].maxHeight; el.style.overflow=prevStyles[i].overflow; el.style.resize=prevStyles[i].resize; });
+  }
+}
+
+/* ============================= DASHBOARD EXPORT: PowerPoint (one slide per section) ============================= */
+// Table tiles become real, editable PPT tables (parsed straight from the HTML table).
+// Chart tiles are pinned as flattened PNG snapshots, so they can only come in as images —
+// same constraint as the PDF export.
+function tableElementToPptxRows(tableEl){
+  return [...tableEl.querySelectorAll('tr')].map(tr =>
+    [...tr.children].map(cell => ({
+      text: cell.textContent.trim(),
+      options: { bold: cell.tagName==='TH', fontSize:9, color:'2A323B', fill:cell.tagName==='TH'?{color:'F0F2F4'}:undefined }
+    }))
+  );
+}
+async function exportDashboardPPTX(){
+  if(typeof PptxGenJS === 'undefined'){ alert('PowerPoint export library did not load — check your internet connection and try again.'); return; }
+  const sectionsToExport = allDashboardSections().filter(sectionHasExportableContent);
+  if(sectionsToExport.length===0){ alert('Nothing with a chart, table, or key insight to export yet — pin something to the Dashboard first.'); return; }
+
+  const btn = document.getElementById('export-pptx-btn');
+  const btnLabel = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Building PowerPoint…'; }
+
+  try{
+    const pptx = new PptxGenJS();
+    pptx.defineLayout({name:'WIDE', width:13.33, height:7.5});
+    pptx.layout = 'WIDE';
+
+    sectionsToExport.forEach(s=>{
+      const slide = pptx.addSlide();
+      slide.background = { color:'FFFFFF' };
+      slide.addText(s.name, { x:0.4, y:0.22, w:12.5, h:0.55, fontSize:22, bold:true, color:'1A2027', fontFace:'Arial' });
+
+      let cursorY = 0.9;
+      const ki = ensureKI(s.id);
+      const kiTexts = [...ki.top, ...ki.bottom].map(k=>htmlToPlain(k.html)).filter(Boolean);
+      if(kiTexts.length){
+        const kiText = kiTexts.map(t=>'💡  '+t).join('\n\n');
+        const kiHeight = Math.min(1.8, Math.max(0.5, kiTexts.length*0.42));
+        slide.addText(kiText, { x:0.4, y:cursorY, w:12.5, h:kiHeight, fontSize:12, color:'454E58', italic:true, fontFace:'Arial', valign:'top' });
+        cursorY += kiHeight + 0.15;
+      }
+
+      const tiles = dashboard[s.id] || [];
+      const colWidth = 6.1, colGap = 0.3, rowStartY = cursorY;
+      const colX = [0.4, 0.4+colWidth+colGap];
+      const colY = [rowStartY, rowStartY];
+      tiles.forEach((t,i)=>{
+        const col = i % 2;
+        const x = colX[col], y = Math.min(colY[col], 6.9);
+        slide.addText(t.title, { x, y, w:colWidth, h:0.28, fontSize:11, bold:true, color:'1A2027', fontFace:'Arial' });
+        const bodyY = y + 0.32;
+        const temp = document.createElement('div');
+        temp.innerHTML = t.html;
+        const tableEl = temp.querySelector('table');
+        if(tableEl){
+          const tblRows = tableElementToPptxRows(tableEl);
+          const rowH = Math.min(3.4, Math.max(0.5, tblRows.length*0.26));
+          slide.addTable(tblRows, { x, y:bodyY, w:colWidth, h:rowH, fontSize:9, autoPage:false, border:{type:'solid', color:'DDE1E6', pt:0.5} });
+          colY[col] = bodyY + rowH + 0.35;
+        } else {
+          const imgEl = temp.querySelector('img');
+          if(imgEl && imgEl.src){
+            const imgH = 2.5;
+            slide.addImage({ data: imgEl.src, x, y:bodyY, w:colWidth, h:imgH, sizing:{type:'contain', w:colWidth, h:imgH} });
+            colY[col] = bodyY + imgH + 0.35;
+          }
+        }
+      });
+    });
+
+    const outName = (fileName ? fileName.replace(/\.[^.]+$/,'') : 'xsurvey_dashboard') + '.pptx';
+    await pptx.writeFile({ fileName: outName });
+  }catch(err){
+    alert('Could not generate the PowerPoint file: '+err.message);
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = btnLabel; }
   }
 }
 
