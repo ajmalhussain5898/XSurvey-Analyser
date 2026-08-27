@@ -114,6 +114,10 @@ tr:hover td{background:var(--bg-2);}
 .tile-title-input{flex:1;background:transparent;border:1px solid transparent;color:var(--text-0);font-family:'Inter';font-size:12.5px;font-weight:600;padding:3px 6px;border-radius:5px;min-width:0;}
 .tile-title-input:hover{background:var(--bg-2);border-color:var(--border);}
 .tile-title-input:focus{background:var(--bg-2);border-color:var(--accent);outline:none;}
+.icon-x-btn{color:var(--text-2);cursor:pointer;font-size:14px;line-height:1;background:none;border:none;padding:2px 5px;border-radius:4px;}
+.icon-x-btn:hover{color:var(--danger);background:var(--bg-2);}
+.checkbox-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-1);margin-top:10px;}
+.checkbox-row input{cursor:pointer;}
 .tile img{width:100%;border-radius:6px;}
 .tile table{font-size:11px;}
 .empty-dash{border:1px dashed var(--border);border-radius:var(--radius);padding:26px;text-align:center;color:var(--text-2);font-size:12px;}
@@ -244,6 +248,8 @@ tr:hover td{background:var(--bg-2);}
       <div class="nav-group-label">Data</div>
       <div class="nav-item" data-tab="upload"><span class="dot"></span>Upload &amp; Preview</div>
       <div class="nav-item" data-tab="clean"><span class="dot"></span>Missing Values &amp; ETL</div>
+      <div class="nav-item" data-tab="manual"><span class="dot"></span>Manual Review &amp; Cleaning</div>
+      <div class="nav-item" data-tab="varbuilder"><span class="dot"></span>Create Variables</div>
       <div class="nav-item" data-tab="dict"><span class="dot"></span>Question Dictionary</div>
     </div>
     <div class="nav-group" data-role-group="analyst">
@@ -313,6 +319,58 @@ tr:hover td{background:var(--bg-2);}
         <div id="clean-body"></div>
       </section>
 
+      <!-- ===================== MANUAL REVIEW & CLEANING ===================== -->
+      <section id="tab-manual" class="tab-panel hidden">
+        <h2 class="panel-title">Manual Review &amp; Cleaning</h2>
+        <p class="panel-sub">Review the raw data row by row, edit any cell directly, delete bad rows, or add a row/column by hand. Changes here update the dataset everywhere else in the tool.</p>
+        <div class="card">
+          <div class="card-h">
+            <h3>Rows</h3>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="text" id="manual-search" placeholder="Search any cell…" style="width:200px" oninput="manualPage=0; renderManualReview()">
+              <span class="hint" id="manual-row-count"></span>
+            </div>
+          </div>
+          <div class="field-row" style="margin-top:0;margin-bottom:12px">
+            <button class="btn secondary small" onclick="addManualRow()">+ Add row</button>
+            <button class="btn secondary small" onclick="openAddColumn()">+ Add column</button>
+          </div>
+          <div id="manual-add-column-form" class="hidden" style="margin-bottom:14px"></div>
+          <div class="grid-wrap" id="manual-table-wrap" style="max-height:520px;overflow:auto"></div>
+          <div class="field-row" style="margin-top:12px;justify-content:center">
+            <button class="btn secondary small" onclick="manualPage=Math.max(0,manualPage-1); renderManualReview();">‹ Prev</button>
+            <span class="hint" id="manual-page-label" style="align-self:center"></span>
+            <button class="btn secondary small" onclick="manualPage=manualPage+1; renderManualReview();">Next ›</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CREATE VARIABLES ===================== -->
+      <section id="tab-varbuilder" class="tab-panel hidden">
+        <h2 class="panel-title">Create Variables</h2>
+        <p class="panel-sub">Build a new derived variable by grouping the answer options of an existing question into fewer categories — e.g. collapse 10 product features into 3 buckets. The new variable then appears everywhere else in the tool, like any other question.</p>
+
+        <div class="card">
+          <div class="card-h"><h3 id="var-form-title">New derived variable</h3></div>
+          <div class="field-row">
+            <div><label class="field-label">Source question</label><select id="var-source-col" onchange="loadVarOptions()"></select></div>
+            <div><label class="field-label">New variable name</label><input type="text" id="var-new-name" placeholder="e.g. Feature Category"></div>
+            <div><label class="field-label">Section</label><select id="var-new-section"></select></div>
+          </div>
+          <p class="small-note" id="var-instructions">Each answer option below defaults to passing through unchanged. Type the same group name into two or more boxes to merge those options into one category.</p>
+          <div id="var-options-wrap"></div>
+          <div class="field-row" style="margin-top:14px">
+            <button class="btn small" onclick="createDerivedVariable()">Create variable</button>
+            <button class="btn secondary small hidden" id="var-cancel-edit-btn" onclick="cancelEditDerivedVariable()">Cancel edit</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><h3>Existing derived variables</h3><span class="hint" id="derived-count">0 created</span></div>
+          <div id="derived-vars-list"></div>
+        </div>
+      </section>
+
       <!-- ===================== DICTIONARY ===================== -->
       <section id="tab-dict" class="tab-panel hidden">
         <h2 class="panel-title">Question Dictionary</h2>
@@ -339,7 +397,7 @@ tr:hover td{background:var(--bg-2);}
 
         <div class="module-grid">
           <div class="module-card active" data-mod="freq"><div class="mod-icon">▤</div><h4>Frequency Table &amp; Graph</h4><p>Counts &amp; % by base</p></div>
-          <div class="module-card" data-mod="cross"><div class="mod-icon">⊞</div><h4>Cross-Tabulation</h4><p>Banner-style, up to 5 columns</p></div>
+          <div class="module-card" data-mod="cross"><div class="mod-icon">⊞</div><h4>Cross-Tabulation</h4><p>Banner-style, unlimited columns</p></div>
           <div class="module-card" data-mod="multi"><div class="mod-icon">☑</div><h4>Multi-Response</h4><p>% of respondents vs. % of mentions</p></div>
           <div class="module-card" data-mod="desc"><div class="mod-icon">Σ</div><h4>Descriptive Statistics</h4><p>Mean / median / SD / distribution</p></div>
           <div class="module-card" data-mod="vw"><div class="mod-icon">$</div><h4>PSM — Van Westendorp</h4><p>Pick your 4 price questions</p></div>
@@ -461,6 +519,10 @@ const HISTORY_KEY = 'xsurvey_analyser_history_v1';
 let currentMod = 'freq';
 let role = 'analyst';
 let uid = 0; const newId = ()=> 'sec_'+(++uid)+'_'+Math.random().toString(36).slice(2,7);
+let derivedVars = [];        // [{id, name, sourceCol, newCol, type, mapping:{origValue:groupName}}]
+let editingDerivedVarId = null;
+let manualPage = 0;
+const MANUAL_PAGE_SIZE = 25;
 
 function seedDefaultSections(){
   sections = [
@@ -480,7 +542,7 @@ function ensureKI(sectionId){ if(!keyInsights[sectionId]) keyInsights[sectionId]
 function saveState(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      rows, columns, dict, sections, dashboardOnlySections, dashboard, keyInsights, fileName, uid
+      rows, columns, dict, sections, dashboardOnlySections, dashboard, keyInsights, fileName, uid, derivedVars
     }));
   }catch(e){ console.warn('Could not save XSurvey Analyser state to this browser:', e.message); }
 }
@@ -493,6 +555,7 @@ function loadState(){
     rows = s.rows||[]; columns = s.columns||[]; dict = s.dict||{};
     sections = s.sections||[]; dashboardOnlySections = s.dashboardOnlySections||[];
     dashboard = s.dashboard||{}; keyInsights = s.keyInsights||{}; fileName = s.fileName||''; uid = s.uid||0;
+    derivedVars = s.derivedVars||[];
     return true;
   }catch(e){ console.warn('Could not restore saved state:', e.message); return false; }
 }
@@ -534,6 +597,7 @@ function removeData(){
   try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
   rows=[]; columns=[]; dict={}; dashboardOnlySections=[]; fileName='';
   ggRows=[]; kanoFeatures=[]; kanoMapping={};
+  derivedVars=[]; editingDerivedVarId=null; manualPage=0;
   seedDefaultSections();
   dashboard={}; keyInsights={}; allDashboardSections().forEach(s=>{ dashboard[s.id]=[]; keyInsights[s.id]={top:[],bottom:[]}; });
   document.getElementById('ds-name').textContent = 'No dataset loaded';
@@ -571,6 +635,7 @@ document.getElementById('file-input').addEventListener('change', function(e){
 
     columns = parsedColumns;
     rows = parsedRows;
+    derivedVars = []; editingDerivedVarId = null; manualPage = 0;
     seedDefaultSections();
     buildDictionary();
     dashboard = {}; allDashboardSections().forEach(s=>dashboard[s.id]=[]);
@@ -699,10 +764,242 @@ function renderClean(){
   <p style="color:var(--text-1);font-size:12.5px;line-height:1.6;margin:0">No straight-lining detected across grid-style questions. No completion-time outliers flagged. <span style="color:var(--text-2)">— demo pass; wire to real audit rules on ingest.</span></p></div>`;
 }
 
+/* ============================= MANUAL REVIEW & CLEANING ============================= */
+function filteredManualRowIndices(){
+  const searchEl = document.getElementById('manual-search');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const idx = rows.map((r,i)=>i);
+  if(!q) return idx;
+  return idx.filter(i => columns.some(c => String(rows[i][c]).toLowerCase().includes(q)));
+}
+function renderManualReview(){
+  const wrap = document.getElementById('manual-table-wrap');
+  if(!wrap) return; // tab not mounted (e.g. still on the auth screen)
+  const countEl = document.getElementById('manual-row-count');
+  const pageEl = document.getElementById('manual-page-label');
+  if(columns.length===0){
+    wrap.innerHTML = emptyState('Upload a dataset first.');
+    if(countEl) countEl.textContent = '';
+    if(pageEl) pageEl.textContent = '';
+    return;
+  }
+  const idx = filteredManualRowIndices();
+  const totalPages = Math.max(1, Math.ceil(idx.length / MANUAL_PAGE_SIZE));
+  manualPage = Math.min(Math.max(0,manualPage), totalPages-1);
+  const pageIdx = idx.slice(manualPage*MANUAL_PAGE_SIZE, (manualPage+1)*MANUAL_PAGE_SIZE);
+
+  let head = '<tr><th style="width:36px">#</th>'+columns.map(c=>
+    `<th style="white-space:nowrap">${he(dict[c]?dict[c].short:c)}<button class="icon-x-btn" title="Delete this column" onclick="deleteManualColumn('${qi(c)}')">×</button></th>`
+  ).join('')+'<th style="width:32px"></th></tr>';
+  let body = pageIdx.map(i=>{
+    const cells = columns.map(c=>`<td><input class="qd-input mono" style="min-width:100px" value="${ha(rows[i][c])}" onchange="updateManualCell(${i}, '${qi(c)}', this.value)"></td>`).join('');
+    return `<tr><td style="color:var(--text-2)">${i+1}</td>${cells}<td><button class="icon-x-btn" title="Delete this row" onclick="deleteManualRow(${i})">×</button></td></tr>`;
+  }).join('');
+  wrap.innerHTML = '<table>'+head+body+'</table>';
+  if(countEl) countEl.textContent = idx.length+' row'+(idx.length===1?'':'s')+(idx.length!==rows.length? ' (filtered from '+rows.length+')':'');
+  if(pageEl) pageEl.textContent = 'Page '+(manualPage+1)+' of '+totalPages;
+}
+function updateManualCell(rowIndex, col, value){
+  if(!rows[rowIndex]) return;
+  rows[rowIndex][col] = value;
+  saveState();
+  safeCall(renderClean, 'renderClean'); // keep % missing bars in sync without losing focus on the table
+}
+function addManualRow(){
+  const blank = {}; columns.forEach(c=> blank[c]='');
+  rows.push(blank);
+  manualPage = Math.max(0, Math.ceil(rows.length/MANUAL_PAGE_SIZE)-1);
+  renderAll();
+  showTab('manual');
+}
+function deleteManualRow(index){
+  if(!confirm('Delete row '+(index+1)+'? This cannot be undone.')) return;
+  rows.splice(index,1);
+  renderAll();
+  showTab('manual');
+}
+function openAddColumn(){
+  const wrap = document.getElementById('manual-add-column-form');
+  wrap.classList.toggle('hidden');
+  if(!wrap.classList.contains('hidden')){
+    wrap.innerHTML = `<div class="card" style="background:var(--bg-2);margin-bottom:0">
+      <div class="field-row" style="margin:0">
+        <div><label class="field-label">New column name</label><input type="text" id="manual-new-col-name" placeholder="e.g. Follow-up Notes"></div>
+        <div><label class="field-label">Type</label><select id="manual-new-col-type"><option>Categorical</option><option>Numeric</option><option>Multi-response</option></select></div>
+        <button class="btn small" onclick="addManualColumn()">Add column</button>
+      </div>
+    </div>`;
+  }
+}
+function addManualColumn(){
+  const nameEl = document.getElementById('manual-new-col-name');
+  const name = nameEl.value.trim();
+  if(!name){ alert('Enter a column name.'); return; }
+  if(columns.includes(name)){ alert('A column with that name already exists.'); return; }
+  const type = document.getElementById('manual-new-col-type').value;
+  columns.push(name);
+  dict[name] = { short: name, type, section: sections[0] ? sections[0].id : null };
+  rows.forEach(r=> r[name] = '');
+  document.getElementById('manual-add-column-form').classList.add('hidden');
+  renderAll();
+  showTab('manual');
+}
+function deleteManualColumn(col){
+  const label = dict[col] ? dict[col].short : col;
+  if(!confirm('Delete the column "'+label+'"? This removes it from the Dictionary and Analysis Workbench. Already-pinned Dashboard tiles keep their saved snapshot. This cannot be undone.')) return;
+  columns = columns.filter(c=>c!==col);
+  delete dict[col];
+  rows.forEach(r=> delete r[col]);
+  derivedVars = derivedVars.filter(v=>v.newCol!==col);
+  renderAll();
+  showTab('manual');
+}
+
+/* ============================= CREATE VARIABLES (grouped/recoded, derived from an existing question) ============================= */
+function eligibleVarSourceCols(){
+  return columns.filter(c=> dict[c] && (dict[c].type==='Categorical' || dict[c].type==='Multi-response'));
+}
+function uniqueSourceValues(col){
+  if(!col || !dict[col]) return [];
+  if(dict[col].type==='Multi-response'){
+    const set = new Set();
+    rows.forEach(r=>{ const v=r[col]; if(!v) return; String(v).split(',').map(s=>s.trim()).filter(Boolean).forEach(item=>set.add(item)); });
+    return [...set].sort();
+  }
+  const set = new Set();
+  rows.forEach(r=>{ const v=r[col]; if(v!=="" && v!==undefined && v!==null) set.add(String(v)); });
+  return [...set].sort();
+}
+function renderVarBuilder(){
+  const srcSel = document.getElementById('var-source-col');
+  if(!srcSel) return; // tab not mounted
+  const secSel = document.getElementById('var-new-section');
+  if(columns.length===0){
+    srcSel.innerHTML=''; secSel.innerHTML='';
+    document.getElementById('var-options-wrap').innerHTML='';
+    document.getElementById('derived-vars-list').innerHTML = emptyState('Upload a dataset first.');
+    document.getElementById('derived-count').textContent = '0 created';
+    return;
+  }
+  const eligible = eligibleVarSourceCols();
+  const prevVal = srcSel.value;
+  srcSel.innerHTML = eligible.length
+    ? eligible.map(c=>`<option value="${ha(c)}" ${c===prevVal?'selected':''}>${ha(dict[c].short)} (${dict[c].type})</option>`).join('')
+    : '<option value="">No categorical/multi-response questions yet</option>';
+  secSel.innerHTML = allDashboardSections().map(s=>`<option value="${s.id}">${he(s.name)}</option>`).join('');
+  if(!editingDerivedVarId) loadVarOptions();
+  renderDerivedVarsList();
+}
+function loadVarOptions(){
+  const col = document.getElementById('var-source-col').value;
+  const wrap = document.getElementById('var-options-wrap');
+  if(!col){ wrap.innerHTML=''; return; }
+  const values = uniqueSourceValues(col);
+  const editing = editingDerivedVarId ? derivedVars.find(v=>v.id===editingDerivedVarId) : null;
+  const existingMapping = (editing && editing.sourceCol===col) ? editing.mapping : {};
+  if(values.length===0){ wrap.innerHTML = '<p class="small-note">No answered values found for this question yet.</p>'; return; }
+  wrap.innerHTML = '<div class="grid-wrap" style="max-height:340px;overflow-y:auto"><table><tr><th>Original option</th><th>Group name</th></tr>'+
+    values.map(v=>`<tr><td>${he(v)}</td><td><input class="qd-input mono" data-orig="${ha(v)}" value="${ha(existingMapping[v] || v)}"></td></tr>`).join('')
+    +'</table></div>';
+}
+function createDerivedVariable(){
+  const col = document.getElementById('var-source-col').value;
+  const name = document.getElementById('var-new-name').value.trim();
+  const sectionId = document.getElementById('var-new-section').value;
+  if(!col){ alert('Choose a source question.'); return; }
+  if(!name){ alert('Enter a name for the new variable.'); return; }
+  const wrap = document.getElementById('var-options-wrap');
+  const inputs = [...wrap.querySelectorAll('input[data-orig]')];
+  if(inputs.length===0){ alert('No answer options found for this question.'); return; }
+  const mapping = {};
+  inputs.forEach(inp=>{ mapping[inp.dataset.orig] = inp.value.trim() || inp.dataset.orig; });
+
+  let newCol=null, isEdit=false, existing=null;
+  if(editingDerivedVarId){
+    existing = derivedVars.find(v=>v.id===editingDerivedVarId);
+    if(existing){ newCol = existing.newCol; isEdit = true; }
+  }
+  if(!newCol) newCol = '__derived_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+
+  const type = dict[col].type; // Categorical or Multi-response, mirrors the source question
+  if(!columns.includes(newCol)) columns.push(newCol);
+  dict[newCol] = { short: name, type, section: sectionId };
+
+  rows.forEach(r=>{
+    if(type==='Multi-response'){
+      const v = r[col];
+      if(!v){ r[newCol]=''; return; }
+      const groups = [...new Set(String(v).split(',').map(s=>s.trim()).filter(Boolean).map(item=>mapping[item]||item))];
+      r[newCol] = groups.join(', ');
+    } else {
+      const v = r[col];
+      r[newCol] = (v==="" || v===undefined || v===null) ? '' : (mapping[String(v)] || String(v));
+    }
+  });
+
+  if(isEdit && existing){ existing.name = name; existing.sourceCol = col; existing.mapping = mapping; existing.type = type; }
+  else { derivedVars.push({ id:'dv_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), name, sourceCol:col, newCol, type, mapping }); }
+
+  editingDerivedVarId = null;
+  document.getElementById('var-cancel-edit-btn').classList.add('hidden');
+  document.getElementById('var-new-name').value='';
+  renderAll();
+  showTab('varbuilder');
+  alert('"'+name+'" is ready — find it in the Question Dictionary and Analysis Workbench like any other question.');
+}
+function renderDerivedVarsList(){
+  const wrap = document.getElementById('derived-vars-list');
+  document.getElementById('derived-count').textContent = derivedVars.length+' created';
+  if(derivedVars.length===0){ wrap.innerHTML = '<div style="color:var(--text-2);font-size:12.5px;padding:8px 0">None yet — build one above.</div>'; return; }
+  wrap.innerHTML = derivedVars.map(v=>`
+    <div class="history-card">
+      <div><b>${he(v.name)}</b> <span style="color:var(--text-2);font-size:11.5px">from ${he(dict[v.sourceCol]?dict[v.sourceCol].short:v.sourceCol)} · ${Object.keys(v.mapping).length} options mapped</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn secondary small" onclick="editDerivedVariable('${v.id}')">Edit mapping</button>
+        <button class="btn secondary small" style="border-color:var(--danger);color:var(--danger)" onclick="deleteDerivedVariable('${v.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+function editDerivedVariable(id){
+  const v = derivedVars.find(x=>x.id===id);
+  if(!v) return;
+  editingDerivedVarId = id;
+  document.getElementById('var-source-col').value = v.sourceCol;
+  document.getElementById('var-new-name').value = v.name;
+  document.getElementById('var-new-section').value = dict[v.newCol] ? dict[v.newCol].section : (sections[0] ? sections[0].id : '');
+  document.getElementById('var-cancel-edit-btn').classList.remove('hidden');
+  loadVarOptions();
+  showTab('varbuilder');
+}
+function cancelEditDerivedVariable(){
+  editingDerivedVarId = null;
+  document.getElementById('var-new-name').value = '';
+  document.getElementById('var-cancel-edit-btn').classList.add('hidden');
+  loadVarOptions();
+}
+function deleteDerivedVariable(id){
+  const v = derivedVars.find(x=>x.id===id);
+  if(!v) return;
+  if(!confirm('Delete the derived variable "'+v.name+'"? This removes its column everywhere. This cannot be undone.')) return;
+  columns = columns.filter(c=>c!==v.newCol);
+  delete dict[v.newCol];
+  rows.forEach(r=> delete r[v.newCol]);
+  derivedVars = derivedVars.filter(x=>x.id!==id);
+  if(editingDerivedVarId===id) editingDerivedVarId=null;
+  renderAll();
+  showTab('varbuilder');
+}
+
 /* ============================= HELPERS: freq / chart / export ============================= */
-function freqOf(col){
+function freqOf(col, excludeMissing){
   const counts = {};
-  rows.forEach(r=>{ const v = r[col]===""? "(blank)": String(r[col]); counts[v]=(counts[v]||0)+1; });
+  rows.forEach(r=>{
+    const raw = r[col];
+    const isBlank = raw===""||raw===undefined||raw===null;
+    if(isBlank && excludeMissing) return;
+    const v = isBlank ? "(blank)" : String(raw);
+    counts[v]=(counts[v]||0)+1;
+  });
   return Object.entries(counts).sort((a,b)=>b[1]-a[1]);
 }
 function maFreqOf(col){
@@ -1018,6 +1315,7 @@ function renderModule(mod){
         <div><label class="field-label">Chart type</label>${chartTypeSelector('freq-type',{onchange:'drawFreq()'})}</div>
         <button class="btn secondary small" onclick="drawFreq()">Update</button>
       </div>
+      <label class="checkbox-row"><input type="checkbox" id="freq-exclude-missing" onchange="drawFreq()"> Exclude blank/missing responses from the table, chart, and % base</label>
       <div class="two-col">
         <div class="chart-box"><canvas id="chart-freq"></canvas></div>
         <div id="freq-table"></div>
@@ -1042,6 +1340,7 @@ function renderModule(mod){
         <div><label class="field-label">Chart type</label>${chartTypeSelector('cross-type',{onchange:'drawCross()',stacked:true})}</div>
         <button class="btn secondary small" onclick="drawCross()">Update</button>
       </div>
+      <label class="checkbox-row"><input type="checkbox" id="cross-exclude-missing" onchange="drawCross()"> Exclude respondents blank on either question, so every column's %s sum to 100</label>
       <div id="cross-table-wrap" class="grid-wrap" style="margin-bottom:14px"></div>
       <div class="chart-box"><canvas id="chart-cross"></canvas></div>
       ${chartCustomControls('chart-cross','drawCross')}
@@ -1066,6 +1365,7 @@ function renderModule(mod){
         <div><label class="field-label">Chart type</label>${chartTypeSelector('multi-type',{onchange:'drawMulti()'})}</div>
         <button class="btn secondary small" onclick="drawMulti()">Update</button>
       </div>
+      <label class="checkbox-row"><input type="checkbox" id="multi-include-blank" onchange="drawMulti()"> Include respondents who left this question completely blank in the base (% of total sample, not just those who answered)</label>
       <div class="two-col">
         <div class="chart-box" style="height:340px"><canvas id="chart-multi"></canvas></div>
         <div id="multi-table" style="max-height:340px;overflow-y:auto"></div>
@@ -1089,6 +1389,7 @@ function renderModule(mod){
         <div><label class="field-label">Numeric variable</label><select id="desc-col">${numCols.map(c=>`<option value="${ha(c)}">${ha(dict[c].short)}</option>`).join('')}</select></div>
         <button class="btn secondary small" onclick="drawDesc()">Update</button>
       </div>
+      <label class="checkbox-row"><input type="checkbox" id="desc-show-blank" onchange="drawDesc()"> Show blank/non-numeric responses as a separate "No answer" bar (never counted in mean/median/SD)</label>
       <div class="stat-row" id="desc-stats"></div>
       <div class="two-col">
         <div class="chart-box"><canvas id="chart-desc"></canvas></div>
@@ -1116,7 +1417,9 @@ function drawFreq(){
   const col = document.getElementById('freq-col').value;
   const view = document.getElementById('freq-view').value;
   const type = document.getElementById('freq-type').value;
-  const data = freqOf(col); const total = rows.length;
+  const excludeMissing = document.getElementById('freq-exclude-missing').checked;
+  const data = freqOf(col, excludeMissing);
+  const total = data.reduce((s,d)=>s+d[1],0) || 1; // base = whatever's actually shown, so % always sums to 100
   const labels = data.map(d=>d[0]);
   const metricLabel = view==='pct'?'%':'n';
   const vals = view==='pct'? data.map(d=>Math.round(d[1]/total*1000)/10) : data.map(d=>d[1]);
@@ -1130,14 +1433,16 @@ function drawCross(){
   const rowCol = document.getElementById('cross-row').value;
   const colCol = document.getElementById('cross-col').value;
   const type = document.getElementById('cross-type').value;
-  const rowVals = [...new Set(rows.map(r=>r[rowCol]))].filter(v=>v!=="");
-  const colVals = [...new Set(rows.map(r=>r[colCol]))].filter(v=>v!=="").slice(0,5);
-  const colBase = {}; colVals.forEach(cv=>colBase[cv]=rows.filter(r=>r[colCol]===cv).length);
+  const excludeMissing = document.getElementById('cross-exclude-missing').checked;
+  const baseRows = excludeMissing ? rows.filter(r=> r[rowCol]!=="" && r[colCol]!=="") : rows;
+  const rowVals = [...new Set(baseRows.map(r=>r[rowCol]))].filter(v=>v!=="");
+  const colVals = [...new Set(baseRows.map(r=>r[colCol]))].filter(v=>v!=="");
+  const colBase = {}; colVals.forEach(cv=>colBase[cv]=baseRows.filter(r=>r[colCol]===cv).length);
 
   let head = '<tr><th>'+he(dict[rowCol].short)+'</th>'+colVals.map(cv=>`<th>${he(cv)} (n=${colBase[cv]})</th>`).join('')+'</tr>';
   let bodyRows = rowVals.map(rv=>{
     let cells = colVals.map(cv=>{
-      const n = rows.filter(r=>r[rowCol]===rv && r[colCol]===cv).length;
+      const n = baseRows.filter(r=>r[rowCol]===rv && r[colCol]===cv).length;
       const pct = colBase[cv]? Math.round(n/colBase[cv]*1000)/10 : 0;
       return `<td>${pct}%</td>`;
     }).join('');
@@ -1146,12 +1451,12 @@ function drawCross(){
   document.getElementById('cross-table-wrap').innerHTML = '<table>'+head+bodyRows+'</table>';
 
   const series = colVals.map(cv=>({label:cv, data: rowVals.map(rv=>{
-    const n = rows.filter(r=>r[rowCol]===rv && r[colCol]===cv).length;
+    const n = baseRows.filter(r=>r[rowCol]===rv && r[colCol]===cv).length;
     return colBase[cv]? Math.round(n/colBase[cv]*1000)/10 : 0;
   })}));
   let pieLabels=null, pieVals=null;
   if(type==='pie'){
-    const overall = rowVals.map(rv=> rows.filter(r=>r[rowCol]===rv).length);
+    const overall = rowVals.map(rv=> baseRows.filter(r=>r[rowCol]===rv).length);
     pieLabels=rowVals; pieVals=overall;
     renderChart('chart-cross','pie', rowVals, overall, {});
   } else {
@@ -1170,8 +1475,9 @@ function drawMulti(){
   const col = document.getElementById('multi-col').value;
   const base = document.getElementById('multi-base').value;
   const type = document.getElementById('multi-type').value;
+  const includeBlankInBase = document.getElementById('multi-include-blank').checked;
   const data = maFreqOf(col);
-  const total = rows.filter(r=>r[col]).length;
+  const total = includeBlankInBase ? rows.length : rows.filter(r=>r[col]).length;
   const totalMentions = data.reduce((s,d)=>s+d[1],0);
   const labels = data.map(d=>d[0].length>28? d[0].slice(0,28)+'…':d[0]);
   const vals = base==='resp'? data.map(d=>Math.round(d[1]/total*1000)/10) : data.map(d=>Math.round(d[1]/totalMentions*1000)/10);
@@ -1186,7 +1492,9 @@ function mean(arr){return arr.reduce((a,b)=>a+b,0)/arr.length;}
 function stdev(arr){const m=mean(arr); return Math.sqrt(mean(arr.map(x=>(x-m)**2)));}
 function drawDesc(){
   const col = document.getElementById('desc-col').value;
+  const showBlank = document.getElementById('desc-show-blank').checked;
   const vals = rows.map(r=>parseFloat(r[col])).filter(v=>!isNaN(v));
+  const blankCount = rows.length - vals.length;
   const sorted=[...vals].sort((a,b)=>a-b);
   const med = sorted[Math.floor(sorted.length/2)];
   document.getElementById('desc-stats').innerHTML = `
@@ -1197,11 +1505,13 @@ function drawDesc(){
   const bins = 6; const min=sorted[0], max=sorted[sorted.length-1]; const w=(max-min)/bins||1;
   const counts = new Array(bins).fill(0);
   vals.forEach(v=>{let idx=Math.min(bins-1, Math.floor((v-min)/w)); counts[idx]++;});
-  const labels = counts.map((_,i)=>Math.round(min+i*w)+'–'+Math.round(min+(i+1)*w));
-  renderChart('chart-desc','column',labels,counts,{});
-  document.getElementById('desc-table').innerHTML = tableHtml(['Bucket','n'], labels.map((l,i)=>[l,counts[i]]));
-  window._pinBuffer['desc'] = {canvasId:'chart-desc', title:syncPinTitle('desc', dict[col].short+' — Descriptives'), headers:['Bucket','n'], rowsArr:labels.map((l,i)=>[l,counts[i]])};
-  window._chartBuffer['desc'] = {title:dict[col].short+' — Distribution', headers:['Bucket','n'], rows: labels.map((l,i)=>[l,counts[i]]), type:'column', filename:'descriptives'};
+  let labels = counts.map((_,i)=>Math.round(min+i*w)+'–'+Math.round(min+(i+1)*w));
+  let finalCounts = counts.slice();
+  if(showBlank && blankCount>0){ labels = [...labels, 'No answer']; finalCounts = [...finalCounts, blankCount]; }
+  renderChart('chart-desc','column',labels,finalCounts,{});
+  document.getElementById('desc-table').innerHTML = tableHtml(['Bucket','n'], labels.map((l,i)=>[l,finalCounts[i]]));
+  window._pinBuffer['desc'] = {canvasId:'chart-desc', title:syncPinTitle('desc', dict[col].short+' — Descriptives'), headers:['Bucket','n'], rowsArr:labels.map((l,i)=>[l,finalCounts[i]])};
+  window._chartBuffer['desc'] = {title:dict[col].short+' — Distribution', headers:['Bucket','n'], rows: labels.map((l,i)=>[l,finalCounts[i]]), type:'column', filename:'descriptives'};
 }
 
 /* ============================= ADVANCED: workable, driven from the Dictionary ============================= */
@@ -2120,7 +2430,7 @@ async function changeUserRole(email, role){
 }
 
 /* ============================= NAV / ROLE ============================= */
-const TAB_TITLES = {upload:'Upload & Preview', clean:'Missing Values & ETL', dict:'Question Dictionary', analysis:'Analysis Workbench', dashboard:'Dashboard Builder', history:'Dashboard History', insights:'Generate Insights Report', admin:'Admin Portal'};
+const TAB_TITLES = {upload:'Upload & Preview', clean:'Missing Values & ETL', manual:'Manual Review & Cleaning', varbuilder:'Create Variables', dict:'Question Dictionary', analysis:'Analysis Workbench', dashboard:'Dashboard Builder', history:'Dashboard History', insights:'Generate Insights Report', admin:'Admin Portal'};
 function showTab(tab){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));
   document.getElementById('tab-'+tab).classList.remove('hidden');
@@ -2138,6 +2448,8 @@ function safeCall(fn, label){
 function renderAll(){
   safeCall(renderPreview, 'renderPreview');
   safeCall(renderClean, 'renderClean');
+  safeCall(renderManualReview, 'renderManualReview');
+  safeCall(renderVarBuilder, 'renderVarBuilder');
   safeCall(renderSectionChips, 'renderSectionChips');
   safeCall(renderDictionary, 'renderDictionary');
   safeCall(()=>renderModule(currentMod), 'renderModule');
